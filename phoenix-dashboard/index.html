@@ -3,189 +3,129 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Phoenix · Sprint 14 Dashboard</title>
+<title>Phoenix · Sprint Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #0D1117;
-    --surface: #161B22;
-    --border: #21262D;
-    --blue: #3B82F6;
-    --green: #10B981;
-    --amber: #F59E0B;
-    --red: #EF4444;
-    --purple: #8B5CF6;
-    --text-primary: #E6EDF3;
-    --text-secondary: #7D8590;
-    --text-muted: #484F58;
+    --bg: #0D1117; --surface: #161B22; --border: #21262D;
+    --blue: #3B82F6; --green: #10B981; --amber: #F59E0B;
+    --red: #EF4444; --purple: #8B5CF6;
+    --tp: #E6EDF3; --ts: #7D8590; --tm: #484F58;
     --mono: 'JetBrains Mono', monospace;
     --sans: 'Inter', system-ui, sans-serif;
   }
-
-  html, body {
-    background: var(--bg);
-    color: var(--text-primary);
-    font-family: var(--sans);
-    font-size: 13px;
-    /* No min-height: 100vh — let content define height for iframe */
-    overflow-x: hidden;
-  }
-
+  html, body { background: var(--bg); color: var(--tp); font-family: var(--sans); font-size: 13px; overflow-x: hidden; }
   .wrap { padding: 20px; }
 
-  /* Sprint header bar */
-  .sprint-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border);
+  /* Loading / error */
+  .state-overlay {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 300px; gap: 14px; color: var(--ts);
   }
-  .sprint-title-group {}
-  .sprint-title {
-    font-size: 17px; font-weight: 700; letter-spacing: -0.4px;
-    display: flex; align-items: center; gap: 10px;
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--blue); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
   }
-  .sprint-badge {
-    font-size: 10px; font-weight: 700;
-    background: rgba(59,130,246,0.15); color: var(--blue);
-    padding: 2px 8px; border-radius: 20px;
-    letter-spacing: 0.04em;
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box {
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px; padding: 16px 20px; color: var(--red);
+    font-size: 12px; max-width: 480px; line-height: 1.6;
   }
-  .sprint-sub { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
-  .member-strip { display: flex; align-items: center; gap: 6px; }
-  .member-strip .label { color: var(--text-secondary); font-size: 11px; margin-left: 4px; }
+  .error-box strong { display: block; margin-bottom: 6px; font-size: 13px; }
 
-  /* Stats row */
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-bottom: 16px;
+  /* Sprint header */
+  .sprint-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
   }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    border-top: 3px solid transparent;
+  .sprint-title { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; display: flex; align-items: center; gap: 10px; }
+  .sprint-badge { font-size: 10px; font-weight: 700; background: rgba(59,130,246,0.15); color: var(--blue); padding: 2px 8px; border-radius: 20px; }
+  .sprint-sub { font-size: 11px; color: var(--ts); margin-top: 3px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .member-strip { display: flex; align-items: center; gap: 4px; }
+  .refresh-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--ts); cursor: pointer;
+    font-size: 11px; font-family: var(--sans); transition: all 0.15s;
   }
-  .stat-num {
-    font-family: var(--mono);
-    font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 3px;
-  }
-  .stat-label {
-    font-size: 10px; color: var(--text-secondary);
-    text-transform: uppercase; letter-spacing: 0.08em;
-  }
+  .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .refresh-btn.spinning .ref-icon { animation: spin 0.8s linear infinite; display: inline-block; }
+  .last-updated { font-size: 10px; color: var(--tm); }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; border-top: 3px solid transparent; cursor: default; }
+  .stat-card.clickable { cursor: pointer; transition: transform 0.1s; }
+  .stat-card.clickable:hover { transform: translateY(-1px); }
+  .stat-card.clickable.active { box-shadow: 0 0 0 1px var(--blue); }
+  .stat-num { font-family: var(--mono); font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 3px; }
+  .stat-label { font-size: 10px; color: var(--ts); text-transform: uppercase; letter-spacing: 0.08em; }
 
   /* Content grid */
-  .content-grid {
-    display: grid;
-    grid-template-columns: 1fr 284px;
-    gap: 14px;
-    align-items: start;
-  }
+  .content-grid { display: grid; grid-template-columns: 1fr 284px; gap: 14px; align-items: start; }
 
   /* Cards */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .card-header {
-    padding: 11px 14px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .card-header { padding: 11px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
   .card-title { font-weight: 600; font-size: 12px; }
   .right-col { display: flex; flex-direction: column; gap: 12px; }
-
-  /* Pills */
   .pill { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
   /* Filter bar */
-  .filter-bar {
-    display: flex; gap: 5px;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .filter-btn {
-    padding: 2px 9px; border-radius: 20px; font-size: 11px;
-    cursor: pointer; border: 1px solid var(--border);
-    background: transparent; color: var(--text-secondary);
-    font-family: var(--sans); transition: all 0.12s;
-  }
-  .filter-btn.active {
-    border-color: var(--blue);
-    background: rgba(59,130,246,0.12);
-    color: var(--blue); font-weight: 700;
-  }
+  .filter-bar { display: flex; gap: 5px; padding: 8px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+  .filter-btn { padding: 2px 9px; border-radius: 20px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--ts); font-family: var(--sans); transition: all 0.12s; }
+  .filter-btn.active { border-color: var(--blue); background: rgba(59,130,246,0.12); color: var(--blue); font-weight: 700; }
+  .filter-count { font-family: var(--mono); font-size: 10px; color: var(--tm); margin-left: auto; }
 
   /* Table */
   .table-header {
-    display: grid;
-    grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
-    gap: 8px; padding: 6px 14px;
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--text-muted); border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
+    gap: 8px; padding: 6px 14px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--tm); border-bottom: 1px solid var(--border);
   }
   .table-row {
-    display: grid;
-    grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
-    align-items: center; gap: 8px;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer; transition: background 0.1s;
+    display: grid; grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
+    align-items: center; gap: 8px; padding: 8px 14px;
+    border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s;
+    text-decoration: none; color: inherit;
   }
   .table-row:last-child { border-bottom: none; }
-  .table-row:hover { background: rgba(255,255,255,0.03); }
+  .table-row:hover { background: rgba(255,255,255,0.04); }
   .table-row.odd { background: rgba(255,255,255,0.01); }
-  .type-icon {
-    width: 18px; height: 18px; border-radius: 3px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0;
-  }
+  .table-row:hover { background: rgba(59,130,246,0.06) !important; }
+  .type-icon { width: 18px; height: 18px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0; }
   .issue-key { font-family: var(--mono); font-size: 11px; color: var(--blue); font-weight: 600; }
-  .issue-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .issue-pts { font-family: var(--mono); font-size: 12px; color: var(--text-secondary); text-align: center; }
+  .issue-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tp); }
+  .issue-pts { font-family: var(--mono); font-size: 12px; color: var(--ts); text-align: center; }
   .priority-dot { width: 6px; height: 6px; border-radius: 50%; justify-self: center; }
   .assignee-cell { display: flex; align-items: center; gap: 4px; }
-  .assignee-cell span { font-size: 11px; color: var(--text-secondary); }
-  .resolved-badge { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); }
+  .assignee-cell span { font-size: 11px; color: var(--ts); }
+  .resolved-badge { font-family: var(--mono); font-size: 11px; color: var(--ts); }
+  .empty-state { padding: 24px; text-align: center; color: var(--tm); font-size: 12px; }
 
   /* Avatar */
-  .avatar {
-    width: 22px; height: 22px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 9px; font-weight: 700; color: #fff;
-    flex-shrink: 0; font-family: var(--sans);
-  }
+  .avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0; font-family: var(--sans); }
 
-  /* Velocity card */
+  /* Velocity */
   .velocity-body { padding: 14px; display: flex; align-items: center; gap: 14px; }
   .ring-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
-  .ring-label {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
+  .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
   .ring-num { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--green); line-height: 1; }
-  .ring-sub { font-size: 10px; color: var(--text-muted); }
+  .ring-sub { font-size: 10px; color: var(--tm); }
   .vel-stat { margin-bottom: 8px; }
-  .vel-stat-label { font-size: 11px; color: var(--text-secondary); }
+  .vel-stat-label { font-size: 11px; color: var(--ts); }
   .vel-stat-val { font-family: var(--mono); font-size: 16px; font-weight: 700; }
 
   /* Burndown */
   .burndown-body { padding: 10px 14px 8px; }
-  .burndown-dates { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: var(--text-muted); }
-  .legend { display: flex; gap: 10px; font-size: 10px; color: var(--text-muted); align-items: center; }
+  .burndown-note { font-size: 10px; color: var(--tm); padding: 8px 14px; border-top: 1px solid var(--border); }
+  .burndown-dates { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: var(--tm); }
+  .legend { display: flex; gap: 10px; font-size: 10px; color: var(--tm); align-items: center; }
   .leg-line { width: 14px; height: 2px; display: inline-block; vertical-align: middle; margin-right: 3px; }
 
   /* Workload */
@@ -194,32 +134,52 @@
   .workload-row:last-child { margin-bottom: 0; }
   .workload-meta { flex: 1; }
   .workload-top { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; }
-  .workload-top .name { color: var(--text-primary); }
-  .workload-top .pts { font-family: var(--mono); color: var(--text-secondary); }
+  .workload-top .wname { color: var(--tp); }
+  .workload-top .wpts { font-family: var(--mono); color: var(--ts); }
   .bar-track { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
 
-  /* Auto-resize helper — posts height to parent so Confluence iframe can resize */
-  /* (Requires allowfullscreen or allow="same-origin" on iframe — fallback graceful) */
+  /* Assignee summary in workload */
+  .no-issues { color: var(--tm); font-size: 11px; font-style: italic; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
+  <!-- ── CONFIG NOTICE (remove after filling in) ── -->
+  <div id="configNotice" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--amber);line-height:1.6">
+    <strong style="display:block;margin-bottom:4px">⚙ Configuration required</strong>
+    Open this file and fill in your <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_DOMAIN</code>,
+    <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_EMAIL</code>,
+    <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_API_TOKEN</code>, and
+    <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_BOARD_ID</code>
+    near the top of the &lt;script&gt; block.
+  </div>
+
   <!-- Sprint header -->
   <div class="sprint-header">
-    <div class="sprint-title-group">
-      <div class="sprint-title">
-        Sprint 14 · Phoenix
-        <span class="sprint-badge">ACTIVE</span>
+    <div>
+      <div class="sprint-title" id="sprintTitle">
+        Loading sprint…
+        <span class="sprint-badge" id="sprintBadge">—</span>
       </div>
-      <div class="sprint-sub">Jun 9 – Jun 20, 2026 &nbsp;·&nbsp; 2 days remaining &nbsp;·&nbsp; <span style="color:var(--amber)">⚠ 2 blocked</span></div>
+      <div class="sprint-sub" id="sprintSub">Fetching data from Jira…</div>
     </div>
-    <div class="member-strip" id="memberStrip"></div>
+    <div class="header-right">
+      <div class="member-strip" id="memberStrip"></div>
+      <div>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
+          <span class="ref-icon">↻</span> Refresh
+        </button>
+        <div class="last-updated" id="lastUpdated"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Stats row -->
-  <div class="stats-row" id="statsRow"></div>
+  <div class="stats-row" id="statsRow">
+    <!-- populated by JS -->
+  </div>
 
   <!-- Content grid -->
   <div class="content-grid">
@@ -228,14 +188,18 @@
     <div class="card">
       <div class="card-header">
         <div class="card-title">Sprint Issues</div>
-        <span class="resolved-badge" id="resolvedBadge"></span>
+        <span class="resolved-badge" id="resolvedBadge">—</span>
       </div>
-      <div class="filter-bar" id="filterBar"></div>
+      <div class="filter-bar" id="filterBar">
+        <span style="color:var(--tm);font-size:11px">Loading…</span>
+      </div>
       <div class="table-header">
         <span></span><span>Key</span><span>Summary</span>
         <span>Status</span><span>Pts</span><span>Assignee</span><span></span>
       </div>
-      <div id="issueTable"></div>
+      <div id="issueTable">
+        <div class="state-overlay"><div class="spinner"></div><span>Connecting to Jira…</span></div>
+      </div>
     </div>
 
     <!-- Right column -->
@@ -245,24 +209,24 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">Sprint velocity</div>
-          <span class="pill" style="color:var(--blue);background:rgba(59,130,246,0.1)">Sprint 14</span>
+          <span class="pill" id="velLabel" style="color:var(--blue);background:rgba(59,130,246,0.1)">—</span>
         </div>
         <div class="velocity-body">
           <div class="ring-wrap">
             <svg id="velocityRing" width="110" height="110" style="transform:rotate(-90deg)"></svg>
             <div class="ring-label">
-              <span class="ring-num">72</span>
-              <span class="ring-sub">/ 80 pts</span>
+              <span class="ring-num" id="velDone">—</span>
+              <span class="ring-sub" id="velTarget">/ — pts</span>
             </div>
           </div>
           <div>
             <div class="vel-stat">
               <div class="vel-stat-label">Completed</div>
-              <div class="vel-stat-val" style="color:var(--green)">72 pts</div>
+              <div class="vel-stat-val" id="velDoneVal" style="color:var(--green)">—</div>
             </div>
             <div class="vel-stat" style="margin-bottom:0">
-              <div class="vel-stat-label">Target</div>
-              <div class="vel-stat-val" style="color:var(--text-primary)">80 pts</div>
+              <div class="vel-stat-label">Remaining</div>
+              <div class="vel-stat-val" id="velRemVal" style="color:var(--tp)">—</div>
             </div>
           </div>
         </div>
@@ -271,16 +235,17 @@
       <!-- Burndown -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Burndown</div>
+          <div class="card-title">Burndown (estimated)</div>
           <div class="legend">
             <span><span class="leg-line" style="background:var(--blue)"></span>Actual</span>
-            <span><span class="leg-line" style="background:var(--text-muted);border-top:1px dashed var(--text-muted)"></span>Ideal</span>
+            <span><span class="leg-line" style="background:var(--tm);border-top:1px dashed var(--tm)"></span>Ideal</span>
           </div>
         </div>
         <div class="burndown-body">
           <svg id="burndownChart" width="100%" height="56" viewBox="0 0 260 56" preserveAspectRatio="none" style="overflow:visible;display:block"></svg>
-          <div class="burndown-dates"><span>Jun 9</span><span>Jun 20</span></div>
+          <div class="burndown-dates"><span id="bdStart">—</span><span id="bdEnd">—</span></div>
         </div>
+        <div class="burndown-note">⚠ Jira Cloud doesn't expose burndown via API — chart shows ideal vs current remaining pts</div>
       </div>
 
       <!-- Workload -->
@@ -288,7 +253,9 @@
         <div class="card-header">
           <div class="card-title">Team workload</div>
         </div>
-        <div class="workload-body" id="workloadBody"></div>
+        <div class="workload-body" id="workloadBody">
+          <div style="color:var(--tm);font-size:11px">Loading…</div>
+        </div>
       </div>
 
     </div>
@@ -296,173 +263,480 @@
 </div>
 
 <script>
-const C = {
-  bg:"#0D1117",surface:"#161B22",border:"#21262D",
-  blue:"#3B82F6",green:"#10B981",amber:"#F59E0B",
-  red:"#EF4444",purple:"#8B5CF6",
-  tp:"#E6EDF3",ts:"#7D8590",tm:"#484F58",
+// ════════════════════════════════════════════════════════════════
+//  ▼▼▼  FILL IN YOUR DETAILS HERE  ▼▼▼
+// ════════════════════════════════════════════════════════════════
+const JIRA_DOMAIN    = "nhbc.atlassian.net";   // e.g. nhbc.atlassian.net
+const JIRA_EMAIL     = "cjclarke@nhbc.co.uk";       // your Atlassian account email
+const JIRA_API_TOKEN = "ATATT3xFfGF0mTMgj9ZdzdCfPIb4ZxI_LE8xtoN8LXtit6YlAfYGQsdgT2uAhilfYA4e_tNH9yx2FVgDFIag2Bv-UhZxDvElLFVa8TFzkTB56ivNDoBZCUL1Z5saqzbB5U09MYc89Ymsr2LGMFBv25Ik-hZmvNJGSkYeaNzKWxZ2u-xk_blzflw=14C693DA";         // from id.atlassian.com/manage-profile/security/api-tokens
+const JIRA_BOARD_ID  = "2766";                         // Board ID from your Jira board URL (?rapidView=123)
+const AUTO_REFRESH_MINS = 5;                          // Set to 0 to disable auto-refresh
+// ════════════════════════════════════════════════════════════════
+
+const isConfigured = () =>
+  JIRA_DOMAIN !== "YOUR-DOMAIN.atlassian.net" &&
+  JIRA_EMAIL  !== "your.email@nhbc.co.uk" &&
+  JIRA_API_TOKEN !== "YOUR_API_TOKEN_HERE" &&
+  JIRA_BOARD_ID !== "123";
+
+const AUTH = "Basic " + btoa(JIRA_EMAIL + ":" + JIRA_API_TOKEN);
+const BASE = "https://" + JIRA_DOMAIN;
+
+// Colour helpers
+const STATUS_COLORS = {
+  "To Do":       { color:"#7D8590", bg:"#21262D" },
+  "In Progress": { color:"#F59E0B", bg:"#2D1F06" },
+  "In Review":   { color:"#3B82F6", bg:"#0D1F3C" },
+  "Done":        { color:"#10B981", bg:"#052E16" },
+  "Blocked":     { color:"#EF4444", bg:"#2D0A0A" },
 };
-const AC = { CR:"#3B82F6", SA:"#10B981", JT:"#8B5CF6", MK:"#F59E0B" };
+const DEFAULT_SC = { color:"#7D8590", bg:"#21262D" };
 
-const columns = [
-  { id:"todo",    label:"To Do",       color:C.ts,    count:8  },
-  { id:"inprog",  label:"In Progress", color:C.amber, count:5  },
-  { id:"review",  label:"In Review",   color:C.blue,  count:3  },
-  { id:"done",    label:"Done",        color:C.green, count:21 },
-  { id:"blocked", label:"Blocked",     color:C.red,   count:2  },
-];
+function statusStyle(name) {
+  // fuzzy match
+  for (const [k,v] of Object.entries(STATUS_COLORS)) {
+    if (name.toLowerCase().includes(k.toLowerCase())) return v;
+  }
+  return DEFAULT_SC;
+}
 
-const issues = [
-  { id:"PHX-441", title:"MuleSoft PII masking in audit logs",          type:"story", priority:"high",     assignee:"CR", status:"inprog",  points:5  },
-  { id:"PHX-438", title:"Copado pipeline health check automation",      type:"task",  priority:"medium",   assignee:"SA", status:"review",  points:3  },
-  { id:"PHX-435", title:"Salesforce FSC ClaimCoverage object mapping", type:"story", priority:"high",     assignee:"JT", status:"done",    points:8  },
-  { id:"PHX-432", title:"AWS IaC baseline for Phoenix infra",          type:"epic",  priority:"critical", assignee:"CR", status:"inprog",  points:13 },
-  { id:"PHX-429", title:"Oracle APEX PL/SQL defect triage workflow",   type:"bug",   priority:"high",     assignee:"MK", status:"blocked", points:5  },
-  { id:"PHX-427", title:"Elastic observability dashboard config",      type:"task",  priority:"medium",   assignee:"SA", status:"inprog",  points:5  },
-  { id:"PHX-424", title:"GitHub Actions workflow for Copado CI",       type:"story", priority:"medium",   assignee:"JT", status:"done",    points:8  },
-  { id:"PHX-420", title:"ServiceNow → Jira sync validation",           type:"task",  priority:"low",      assignee:"CR", status:"todo",    points:3  },
-];
-
-const burndown = [
-  {remaining:80,ideal:80},{remaining:74,ideal:72},{remaining:68,ideal:64},
-  {remaining:65,ideal:56},{remaining:58,ideal:48},{remaining:47,ideal:32},
-  {remaining:38,ideal:24},{remaining:28,ideal:16},{remaining:22,ideal:8},
-];
-
-const typeConfig = {
-  story:{label:"S", bg:"#1D4ED8"}, task:{label:"✓",bg:"#374151"},
-  bug:  {label:"⬥",bg:"#991B1B"}, epic:{label:"⚡",bg:"#5B21B6"},
+const TYPE_CONFIG = {
+  Story:    { label:"S",  bg:"#1D4ED8" },
+  Task:     { label:"✓", bg:"#374151" },
+  Bug:      { label:"⬥", bg:"#991B1B" },
+  Epic:     { label:"⚡", bg:"#5B21B6" },
+  Subtask:  { label:"↳", bg:"#374151" },
 };
-const statusConfig = {
-  todo:   {label:"To Do",       color:C.ts,    bg:"#21262D"},
-  inprog: {label:"In Progress", color:C.amber, bg:"#2D1F06"},
-  review: {label:"In Review",   color:C.blue,  bg:"#0D1F3C"},
-  done:   {label:"Done",        color:C.green, bg:"#052E16"},
-  blocked:{label:"Blocked",     color:C.red,   bg:"#2D0A0A"},
+function typeIcon(t) { return TYPE_CONFIG[t] || { label:t[0], bg:"#374151" }; }
+
+const PRIORITY_COLORS = {
+  Highest:"#EF4444", High:"#F59E0B", Medium:"#3B82F6",
+  Low:"#7D8590", Lowest:"#484F58",
 };
-const priorityColors = { critical:C.red, high:C.amber, medium:C.blue, low:C.ts };
+function prioColor(p) { return PRIORITY_COLORS[p] || "#484F58"; }
 
-// Members
-const ms = document.getElementById("memberStrip");
-Object.entries(AC).forEach(([k,v])=>{
-  const a=document.createElement("div"); a.className="avatar";
-  a.style.background=v; a.textContent=k; ms.appendChild(a);
-});
-const lbl=document.createElement("span"); lbl.className="label";
-lbl.textContent="4 members"; ms.appendChild(lbl);
+// Avatar colour pool
+const AVATAR_POOL = ["#3B82F6","#10B981","#8B5CF6","#F59E0B","#EF4444","#EC4899","#14B8A6","#F97316"];
+const assigneeColors = {};
+let colorIdx = 0;
+function avatarColor(name) {
+  if (!assigneeColors[name]) assigneeColors[name] = AVATAR_POOL[colorIdx++ % AVATAR_POOL.length];
+  return assigneeColors[name];
+}
+function initials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(" ");
+  return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
+}
 
-// Stats
-const sr=document.getElementById("statsRow");
-columns.forEach(col=>{
-  const c=document.createElement("div"); c.className="stat-card";
-  c.style.borderTopColor=col.color;
-  c.innerHTML=`<div class="stat-num" style="color:${col.color}">${col.count}</div><div class="stat-label">${col.label}</div>`;
-  sr.appendChild(c);
-});
+// ── State ─────────────────────────────────────────────────────
+let allIssues = [];
+let activeFilter = "all";
+let activeStat = null;
+let sprintInfo = null;
 
-// Resolved
-const done=columns.find(c=>c.id==="done").count;
-const total=columns.reduce((s,c)=>s+c.count,0);
-document.getElementById("resolvedBadge").textContent=`${done}/${total} resolved`;
-
-// Filter + table
-let af="all";
-const fb=document.getElementById("filterBar");
-[{id:"all",label:"All issues"},{id:"inprog",label:"In Progress"},
- {id:"review",label:"In Review"},{id:"blocked",label:"Blocked"},{id:"done",label:"Done"}
-].forEach(f=>{
-  const b=document.createElement("button"); b.className="filter-btn"+(f.id==="all"?" active":"");
-  b.textContent=f.label; b.dataset.id=f.id;
-  b.addEventListener("click",()=>{
-    af=f.id;
-    document.querySelectorAll(".filter-btn").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active"); renderTable(); postHeight();
+// ── API helpers ───────────────────────────────────────────────
+async function jiraGet(path) {
+  const res = await fetch(BASE + path, {
+    headers: { "Authorization": AUTH, "Accept": "application/json" }
   });
-  fb.appendChild(b);
-});
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Jira API ${res.status}: ${txt.slice(0,200)}`);
+  }
+  return res.json();
+}
 
-function renderTable(){
-  const rows=af==="all"?issues:issues.filter(i=>i.status===af);
-  const t=document.getElementById("issueTable"); t.innerHTML="";
-  rows.forEach((issue,i)=>{
-    const tc=typeConfig[issue.type]||typeConfig.task;
-    const sc=statusConfig[issue.status]||{label:issue.status,color:"#888",bg:"#222"};
-    const row=document.createElement("div");
-    row.className="table-row"+(i%2?" odd":"");
-    row.innerHTML=`
-      <div class="type-icon" style="background:${tc.bg}">${tc.label}</div>
-      <span class="issue-key">${issue.id}</span>
-      <span class="issue-title">${issue.title}</span>
-      <span class="pill" style="color:${sc.color};background:${sc.bg}">${sc.label}</span>
-      <span class="issue-pts">${issue.points}</span>
-      <div class="assignee-cell">
-        <div class="avatar" style="background:${AC[issue.assignee]}">${issue.assignee}</div>
-        <span>${issue.assignee}</span>
-      </div>
-      <div class="priority-dot" style="background:${priorityColors[issue.priority]}"></div>`;
-    t.appendChild(row);
+// ── Main load ─────────────────────────────────────────────────
+async function loadAll() {
+  if (!isConfigured()) {
+    document.getElementById("configNotice").style.display = "block";
+    showError("Fill in your Jira credentials in the CONFIG section at the top of the &lt;script&gt; block.");
+    return;
+  }
+
+  setRefreshing(true);
+
+  try {
+    // 1. Get active sprint for board
+    const sprintData = await jiraGet(`/rest/agile/1.0/board/${JIRA_BOARD_ID}/sprint?state=active`);
+    if (!sprintData.values?.length) throw new Error("No active sprint found for board " + JIRA_BOARD_ID);
+    sprintInfo = sprintData.values[0];
+
+    // 2. Get all issues in sprint (paginate if needed)
+    let issues = [], startAt = 0, total = Infinity;
+    while (startAt < total) {
+      const chunk = await jiraGet(`/rest/agile/1.0/sprint/${sprintInfo.id}/issue?startAt=${startAt}&maxResults=100&fields=summary,status,issuetype,priority,assignee,story_points,customfield_10016`);
+      issues = issues.concat(chunk.issues);
+      total = chunk.total;
+      startAt += chunk.issues.length;
+      if (!chunk.issues.length) break;
+    }
+    allIssues = issues;
+
+    // 3. Render everything
+    renderSprintHeader();
+    renderStats();
+    renderFilterBar();
+    renderTable();
+    renderVelocity();
+    renderBurndown();
+    renderWorkload();
+
+    // Update timestamp
+    const now = new Date();
+    document.getElementById("lastUpdated").textContent =
+      "Updated " + now.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
+
+    postHeight();
+  } catch(err) {
+    showError(err.message);
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+function setRefreshing(on) {
+  const btn = document.getElementById("refreshBtn");
+  btn.classList.toggle("spinning", on);
+  btn.disabled = on;
+}
+
+function showError(msg) {
+  document.getElementById("issueTable").innerHTML =
+    `<div class="state-overlay"><div class="error-box"><strong>⚠ Could not load Jira data</strong>${msg}<br><br>
+    Check your API token, domain, and board ID. Also ensure your browser allows cross-origin requests to Atlassian (some corporate proxies block this).</div></div>`;
+}
+
+// ── Render: sprint header ─────────────────────────────────────
+function renderSprintHeader() {
+  const s = sprintInfo;
+  document.getElementById("sprintTitle").childNodes[0].textContent = s.name + " ";
+  document.getElementById("sprintBadge").textContent = s.state.toUpperCase();
+
+  const start = s.startDate ? new Date(s.startDate).toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : "?";
+  const end   = s.endDate   ? new Date(s.endDate).toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : "?";
+
+  // Days remaining
+  let daysLeft = "";
+  if (s.endDate) {
+    const diff = Math.ceil((new Date(s.endDate) - Date.now()) / 86400000);
+    daysLeft = diff > 0 ? ` · ${diff} day${diff!==1?"s":""} remaining` : " · Sprint ended";
+  }
+
+  // Blocked count
+  const blocked = allIssues.filter(i => i.fields.status.name.toLowerCase().includes("block")).length;
+  const blockedHtml = blocked > 0
+    ? ` · <span style="color:var(--amber)">⚠ ${blocked} blocked</span>` : "";
+
+  document.getElementById("sprintSub").innerHTML = `${start} – ${end}${daysLeft}${blockedHtml}`;
+
+  // Members
+  const seen = new Set();
+  const strip = document.getElementById("memberStrip");
+  strip.innerHTML = "";
+  allIssues.forEach(i => {
+    const a = i.fields.assignee;
+    if (a && !seen.has(a.accountId)) {
+      seen.add(a.accountId);
+      const el = document.createElement("div");
+      el.className = "avatar";
+      el.style.background = avatarColor(a.displayName);
+      el.title = a.displayName;
+      // Use Jira avatar image if available
+      if (a.avatarUrls?.["24x24"]) {
+        el.innerHTML = `<img src="${a.avatarUrls["24x24"]}" width="22" height="22" style="border-radius:50%;display:block">`;
+      } else {
+        el.textContent = initials(a.displayName);
+      }
+      strip.appendChild(el);
+    }
   });
 }
-renderTable();
 
-// Velocity ring
-(function(){
-  const svg=document.getElementById("velocityRing");
-  const size=110, cx=55, r=(size-14)/2, circ=2*Math.PI*r, target=72/80;
-  const ns="http://www.w3.org/2000/svg";
-  const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
-  svg.appendChild(mk("circle",{cx,cy:cx,r,fill:"none",stroke:C.border,"stroke-width":7}));
-  const arc=mk("circle",{cx,cy:cx,r,fill:"none",stroke:C.blue,"stroke-width":7,"stroke-linecap":"round","stroke-dasharray":`0 ${circ}`});
+// ── Render: stats ─────────────────────────────────────────────
+function renderStats() {
+  const statuses = {};
+  allIssues.forEach(i => {
+    const s = i.fields.status.name;
+    statuses[s] = (statuses[s] || 0) + 1;
+  });
+
+  // Build canonical groups
+  const groups = [
+    { id:"todo",    label:"To Do",       color:"#7D8590", match: s => /to.?do|open|backlog/i.test(s) },
+    { id:"inprog",  label:"In Progress", color:"#F59E0B", match: s => /progress|active|start/i.test(s) },
+    { id:"review",  label:"In Review",   color:"#3B82F6", match: s => /review|test|qa/i.test(s) },
+    { id:"done",    label:"Done",        color:"#10B981", match: s => /done|complet|close|resolv/i.test(s) },
+    { id:"blocked", label:"Blocked",     color:"#EF4444", match: s => /block/i.test(s) },
+  ];
+
+  // Count per group
+  groups.forEach(g => {
+    g.count = 0;
+    Object.entries(statuses).forEach(([s, n]) => { if (g.match(s)) g.count += n; });
+  });
+
+  const sr = document.getElementById("statsRow");
+  sr.innerHTML = "";
+  groups.forEach(g => {
+    const card = document.createElement("div");
+    card.className = "stat-card clickable" + (activeStat === g.id ? " active" : "");
+    card.style.borderTopColor = g.color;
+    card.innerHTML = `<div class="stat-num" style="color:${g.color}">${g.count}</div><div class="stat-label">${g.label}</div>`;
+    card.addEventListener("click", () => {
+      activeStat = activeStat === g.id ? null : g.id;
+      activeFilter = activeStat || "all";
+      renderStats();
+      renderFilterBar();
+      renderTable();
+    });
+    sr.appendChild(card);
+  });
+}
+
+// ── Render: filter bar ────────────────────────────────────────
+function renderFilterBar() {
+  const fb = document.getElementById("filterBar");
+  fb.innerHTML = "";
+
+  // Collect unique statuses from real data
+  const statusNames = [...new Set(allIssues.map(i => i.fields.status.name))].sort();
+  const filters = [{ id:"all", label:"All issues" },
+    ...statusNames.map(s => ({ id:s, label:s }))
+  ];
+
+  filters.forEach(f => {
+    const btn = document.createElement("button");
+    btn.className = "filter-btn" + (activeFilter === f.id ? " active" : "");
+    const count = f.id === "all" ? allIssues.length : allIssues.filter(i => i.fields.status.name === f.id).length;
+    btn.textContent = f.label;
+    btn.addEventListener("click", () => {
+      activeFilter = f.id;
+      activeStat = null;
+      renderStats();
+      renderFilterBar();
+      renderTable();
+    });
+    fb.appendChild(btn);
+  });
+
+  // Resolved count
+  const fc = document.createElement("span");
+  fc.className = "filter-count";
+  const done = allIssues.filter(i => /done|complet|close|resolv/i.test(i.fields.status.name)).length;
+  fc.textContent = `${done}/${allIssues.length} resolved`;
+  fb.appendChild(fc);
+
+  document.getElementById("resolvedBadge").textContent = `${done}/${allIssues.length} resolved`;
+}
+
+// ── Render: issue table ───────────────────────────────────────
+function renderTable() {
+  const filtered = activeFilter === "all"
+    ? allIssues
+    : allIssues.filter(i => i.fields.status.name === activeFilter);
+
+  const tbl = document.getElementById("issueTable");
+  tbl.innerHTML = "";
+
+  if (!filtered.length) {
+    tbl.innerHTML = `<div class="empty-state">No issues match this filter</div>`;
+    postHeight(); return;
+  }
+
+  filtered.forEach((issue, idx) => {
+    const f = issue.fields;
+    const tc = typeIcon(f.issuetype.name);
+    const sc = statusStyle(f.status.name);
+    const pts = f.story_points || f.customfield_10016 || "—";
+    const assigneeName = f.assignee?.displayName || "Unassigned";
+    const prio = f.priority?.name || "Medium";
+
+    const row = document.createElement("a");
+    row.className = "table-row" + (idx % 2 ? " odd" : "");
+    row.href = `${BASE}/browse/${issue.key}`;
+    row.target = "_blank";
+    row.rel = "noopener";
+    row.title = `Open ${issue.key} in Jira`;
+
+    // Avatar for assignee
+    let avatarHtml;
+    if (f.assignee?.avatarUrls?.["24x24"]) {
+      avatarHtml = `<img src="${f.assignee.avatarUrls["24x24"]}" width="22" height="22" style="border-radius:50%">`;
+    } else {
+      avatarHtml = `<div class="avatar" style="background:${avatarColor(assigneeName)}">${initials(assigneeName)}</div>`;
+    }
+
+    row.innerHTML = `
+      <div class="type-icon" style="background:${tc.bg}" title="${f.issuetype.name}">${tc.label}</div>
+      <span class="issue-key">${issue.key}</span>
+      <span class="issue-title" title="${f.summary}">${f.summary}</span>
+      <span class="pill" style="color:${sc.color};background:${sc.bg}">${f.status.name}</span>
+      <span class="issue-pts">${pts}</span>
+      <div class="assignee-cell">${avatarHtml}<span>${assigneeName.split(" ")[0]}</span></div>
+      <div class="priority-dot" style="background:${prioColor(prio)}" title="${prio}"></div>`;
+    tbl.appendChild(row);
+  });
+
+  postHeight();
+}
+
+// ── Render: velocity ring ─────────────────────────────────────
+function renderVelocity() {
+  const getPoints = issue => {
+    const f = issue.fields;
+    return parseFloat(f.story_points || f.customfield_10016 || 0);
+  };
+
+  const total = allIssues.reduce((s, i) => s + getPoints(i), 0);
+  const done  = allIssues
+    .filter(i => /done|complet|close|resolv/i.test(i.fields.status.name))
+    .reduce((s, i) => s + getPoints(i), 0);
+  const remaining = total - done;
+
+  document.getElementById("velLabel").textContent = sprintInfo?.name || "Sprint";
+  document.getElementById("velDone").textContent   = Math.round(done);
+  document.getElementById("velTarget").textContent = `/ ${Math.round(total)} pts`;
+  document.getElementById("velDoneVal").textContent = Math.round(done) + " pts";
+  document.getElementById("velRemVal").textContent  = Math.round(remaining) + " pts";
+
+  const pct = total > 0 ? done / total : 0;
+  const svg = document.getElementById("velocityRing");
+  svg.innerHTML = "";
+  const size = 110, cx = 55, r = (size - 14) / 2;
+  const circ = 2 * Math.PI * r;
+  const ns = "http://www.w3.org/2000/svg";
+  const mk = (tag, attrs) => {
+    const e = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k, v));
+    return e;
+  };
+  const strokeColor = pct >= 0.9 ? "#10B981" : pct >= 0.5 ? "#3B82F6" : "#F59E0B";
+  svg.appendChild(mk("circle", { cx, cy:cx, r, fill:"none", stroke:"#21262D", "stroke-width":7 }));
+  const arc = mk("circle", { cx, cy:cx, r, fill:"none", stroke:strokeColor, "stroke-width":7, "stroke-linecap":"round", "stroke-dasharray":`0 ${circ}` });
   svg.appendChild(arc);
-  let start=null;
-  (function step(ts){
-    if(!start)start=ts;
-    const p=Math.min((ts-start)/1200,1), ease=1-Math.pow(1-p,3);
-    arc.setAttribute("stroke-dasharray",`${ease*target*circ} ${circ}`);
-    if(p<1)requestAnimationFrame(step);
+  let start = null;
+  (function step(ts) {
+    if (!start) start = ts;
+    const p = Math.min((ts - start) / 1000, 1), ease = 1 - Math.pow(1 - p, 3);
+    arc.setAttribute("stroke-dasharray", `${ease * pct * circ} ${circ}`);
+    if (p < 1) requestAnimationFrame(step);
   })(performance.now());
-})();
+}
 
-// Burndown
-(function(){
-  const svg=document.getElementById("burndownChart");
-  const W=260,H=56,max=80,n=burndown.length;
-  const ns="http://www.w3.org/2000/svg";
-  const pt=(arr,key)=>arr.map((d,i)=>`${i===0?"M":"L"}${(i/(n-1))*W},${H-(d[key]/max)*H}`).join(" ");
-  const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
-  svg.appendChild(mk("path",{d:pt(burndown,"ideal"),fill:"none",stroke:C.tm,"stroke-width":"1.5","stroke-dasharray":"4 3"}));
-  svg.appendChild(mk("path",{d:pt(burndown,"remaining"),fill:"none",stroke:C.blue,"stroke-width":"2"}));
-  const lx=W, ly=H-(burndown[n-1].remaining/max)*H;
-  svg.appendChild(mk("circle",{cx:lx,cy:ly,r:"4",fill:C.blue}));
-})();
+// ── Render: burndown (ideal vs current snapshot) ──────────────
+function renderBurndown() {
+  const s = sprintInfo;
+  if (!s?.startDate || !s?.endDate) return;
 
-// Workload
-(function(){
-  const body=document.getElementById("workloadBody"), maxPts=21;
-  Object.entries(AC).forEach(([k,v])=>{
-    const pts=issues.filter(i=>i.assignee===k).reduce((s,i)=>s+i.points,0);
-    const row=document.createElement("div"); row.className="workload-row";
-    row.innerHTML=`
-      <div class="avatar" style="background:${v}">${k}</div>
+  const start = new Date(s.startDate);
+  const end   = new Date(s.endDate);
+  const now   = new Date();
+
+  document.getElementById("bdStart").textContent = start.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  document.getElementById("bdEnd").textContent   = end.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+
+  const totalDays = Math.max(1, Math.round((end - start) / 86400000));
+  const elapsed   = Math.min(totalDays, Math.round((now - start) / 86400000));
+
+  const getPoints = i => parseFloat(i.fields.story_points || i.fields.customfield_10016 || 0);
+  const totalPts  = allIssues.reduce((s, i) => s + getPoints(i), 0);
+  const donePts   = allIssues.filter(i => /done|complet|close|resolv/i.test(i.fields.status.name))
+                              .reduce((s, i) => s + getPoints(i), 0);
+  const remaining = totalPts - donePts;
+
+  // Build a simple 2-point actual line: start → today's remaining
+  // and ideal line: start → end (0)
+  const W = 260, H = 56, max = totalPts || 1;
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("burndownChart");
+  svg.innerHTML = "";
+  const mk = (tag, attrs) => {
+    const e = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k, v));
+    return e;
+  };
+  const xScale = i => (i / totalDays) * W;
+  const yScale = v => H - (v / max) * H;
+
+  // Ideal
+  svg.appendChild(mk("path", {
+    d: `M0,0 L${W},${H}`, fill:"none", stroke:"#484F58", "stroke-width":"1.5", "stroke-dasharray":"4 3"
+  }));
+  // Actual (start full → today's remaining)
+  const ax = xScale(elapsed), ay = yScale(remaining);
+  svg.appendChild(mk("path", {
+    d:`M0,0 L${ax},${ay}`, fill:"none", stroke:"#3B82F6", "stroke-width":"2"
+  }));
+  // Dot at today
+  svg.appendChild(mk("circle", { cx:ax, cy:ay, r:"4", fill:"#3B82F6" }));
+}
+
+// ── Render: workload ──────────────────────────────────────────
+function renderWorkload() {
+  const assigneeMap = {};
+  const getPoints = i => parseFloat(i.fields.story_points || i.fields.customfield_10016 || 0);
+
+  allIssues.forEach(i => {
+    const a = i.fields.assignee;
+    const name = a?.displayName || "Unassigned";
+    if (!assigneeMap[name]) {
+      assigneeMap[name] = {
+        name, pts: 0, count: 0,
+        avatar: a?.avatarUrls?.["24x24"] || null,
+        color: avatarColor(name)
+      };
+    }
+    assigneeMap[name].pts   += getPoints(i);
+    assigneeMap[name].count += 1;
+  });
+
+  const people = Object.values(assigneeMap).sort((a,b) => b.pts - a.pts);
+  const maxPts = people[0]?.pts || 1;
+
+  const body = document.getElementById("workloadBody");
+  body.innerHTML = "";
+
+  people.forEach(p => {
+    const pct = (p.pts / maxPts) * 100;
+    const row = document.createElement("div");
+    row.className = "workload-row";
+    const avatarHtml = p.avatar
+      ? `<img src="${p.avatar}" width="22" height="22" style="border-radius:50%;flex-shrink:0">`
+      : `<div class="avatar" style="background:${p.color}">${initials(p.name)}</div>`;
+    row.innerHTML = `
+      ${avatarHtml}
       <div class="workload-meta">
-        <div class="workload-top"><span class="name">${k}</span><span class="pts">${pts} pts</span></div>
-        <div class="bar-track"><div class="bar-fill" style="width:0%;background:${v};transition:width 0.8s cubic-bezier(0.4,0,0.2,1)" data-w="${(pts/maxPts)*100}"></div></div>
+        <div class="workload-top">
+          <span class="wname">${p.name.split(" ")[0]}</span>
+          <span class="wpts">${Math.round(p.pts)} pts · ${p.count} issue${p.count!==1?"s":""}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:0%;background:${p.color}" data-w="${pct}"></div>
+        </div>
       </div>`;
     body.appendChild(row);
   });
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    document.querySelectorAll(".bar-fill").forEach(el=>el.style.width=el.dataset.w+"%");
-    postHeight();
-  }));
-})();
 
-// Post height to parent for iframe auto-resize
-function postHeight(){
-  const h=document.body.scrollHeight;
-  try{ window.parent.postMessage({type:"dashboard-height",height:h},"*"); }catch(e){}
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll(".bar-fill").forEach(el => el.style.width = el.dataset.w + "%");
+  }));
 }
-window.addEventListener("load", postHeight);
+
+// ── Height posting for Confluence iframe ──────────────────────
+function postHeight() {
+  try { window.parent.postMessage({ type:"dashboard-height", height:document.body.scrollHeight }, "*"); } catch(e) {}
+}
 window.addEventListener("resize", postHeight);
+
+// ── Auto-refresh ──────────────────────────────────────────────
+if (AUTO_REFRESH_MINS > 0) {
+  setInterval(loadAll, AUTO_REFRESH_MINS * 60 * 1000);
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+loadAll();
 </script>
 </body>
 </html>
