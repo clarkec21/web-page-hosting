@@ -5,737 +5,789 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Phoenix · Sprint Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0D1117; --surface: #161B22; --border: #21262D;
-    --blue: #3B82F6; --green: #10B981; --amber: #F59E0B;
-    --red: #EF4444; --purple: #8B5CF6;
-    --tp: #E6EDF3; --ts: #7D8590; --tm: #484F58;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'Inter', system-ui, sans-serif;
-  }
-  html, body { background: var(--bg); color: var(--tp); font-family: var(--sans); font-size: 13px; overflow-x: hidden; }
-  .wrap { padding: 20px; }
+/* ── Reset ─────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-  /* Loading / error */
-  .state-overlay {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 300px; gap: 14px; color: var(--ts);
-  }
-  .spinner {
-    width: 36px; height: 36px; border: 3px solid var(--border);
-    border-top-color: var(--blue); border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .error-box {
-    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 8px; padding: 16px 20px; color: var(--red);
-    font-size: 12px; max-width: 480px; line-height: 1.6;
-  }
-  .error-box strong { display: block; margin-bottom: 6px; font-size: 13px; }
+:root{
+  --bg:#080C14; --s1:#0F1724; --s2:#162032; --b1:#1B2A40; --b2:#243554;
+  --blue:#3B82F6; --blue2:rgba(59,130,246,.12);
+  --green:#10B981; --green2:rgba(16,185,129,.12);
+  --amber:#F59E0B; --amber2:rgba(245,158,11,.12);
+  --red:#EF4444;   --red2:rgba(239,68,68,.12);
+  --purple:#8B5CF6;--purple2:rgba(139,92,246,.12);
+  --t1:#EDF4FF; --t2:#7B8EA8; --t3:#3E5068;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Inter',system-ui,sans-serif;
+}
 
-  /* Sprint header */
-  .sprint-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
-  }
-  .sprint-title { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; display: flex; align-items: center; gap: 10px; }
-  .sprint-badge { font-size: 10px; font-weight: 700; background: rgba(59,130,246,0.15); color: var(--blue); padding: 2px 8px; border-radius: 20px; }
-  .sprint-sub { font-size: 11px; color: var(--ts); margin-top: 3px; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  .member-strip { display: flex; align-items: center; gap: 4px; }
-  .refresh-btn {
-    display: flex; align-items: center; gap: 5px;
-    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border);
-    background: var(--surface); color: var(--ts); cursor: pointer;
-    font-size: 11px; font-family: var(--sans); transition: all 0.15s;
-  }
-  .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
-  .refresh-btn.spinning .ref-icon { animation: spin 0.8s linear infinite; display: inline-block; }
-  .last-updated { font-size: 10px; color: var(--tm); }
+html,body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:13px;
+  line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-  /* Stats */
-  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; border-top: 3px solid transparent; cursor: default; }
-  .stat-card.clickable { cursor: pointer; transition: transform 0.1s; }
-  .stat-card.clickable:hover { transform: translateY(-1px); }
-  .stat-card.clickable.active { box-shadow: 0 0 0 1px var(--blue); }
-  .stat-num { font-family: var(--mono); font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 3px; }
-  .stat-label { font-size: 10px; color: var(--ts); text-transform: uppercase; letter-spacing: 0.08em; }
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes shimmer{0%{background-position:-800px 0}100%{background-position:800px 0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-  /* Content grid */
-  .content-grid { display: grid; grid-template-columns: 1fr 284px; gap: 14px; align-items: start; }
+.spin{animation:spin .7s linear infinite;display:inline-block}
+.skeleton{background:linear-gradient(90deg,var(--s1) 25%,var(--s2) 50%,var(--s1) 75%);
+  background-size:1600px 100%;animation:shimmer 1.6s ease-in-out infinite;border-radius:4px}
+.fade-up{animation:fadeUp .3s ease both}
 
-  /* Cards */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .card-header { padding: 11px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .card-title { font-weight: 600; font-size: 12px; }
-  .right-col { display: flex; flex-direction: column; gap: 12px; }
-  .pill { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+/* ── Shell ──────────────────────────────────────────────────── */
+.shell{padding:16px 18px 32px;max-width:1440px}
 
-  /* Filter bar */
-  .filter-bar { display: flex; gap: 5px; padding: 8px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
-  .filter-btn { padding: 2px 9px; border-radius: 20px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--ts); font-family: var(--sans); transition: all 0.12s; }
-  .filter-btn.active { border-color: var(--blue); background: rgba(59,130,246,0.12); color: var(--blue); font-weight: 700; }
-  .filter-count { font-family: var(--mono); font-size: 10px; color: var(--tm); margin-left: auto; }
+/* ── Header ─────────────────────────────────────────────────── */
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.eyebrow{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:5px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:pulse 2s ease-in-out infinite;box-shadow:0 0 8px var(--green);flex-shrink:0}
+.sprint-title{font-size:21px;font-weight:700;letter-spacing:-.5px;margin-bottom:4px}
+.sprint-meta{font-size:12px;color:var(--t2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;
+  padding:2px 7px;border-radius:20px;border:1px solid}
 
-  /* Table */
-  .table-header {
-    display: grid; grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
-    gap: 8px; padding: 6px 14px; font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase; color: var(--tm); border-bottom: 1px solid var(--border);
-  }
-  .table-row {
-    display: grid; grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
-    align-items: center; gap: 8px; padding: 8px 14px;
-    border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s;
-    text-decoration: none; color: inherit;
-  }
-  .table-row:last-child { border-bottom: none; }
-  .table-row:hover { background: rgba(255,255,255,0.04); }
-  .table-row.odd { background: rgba(255,255,255,0.01); }
-  .table-row:hover { background: rgba(59,130,246,0.06) !important; }
-  .type-icon { width: 18px; height: 18px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0; }
-  .issue-key { font-family: var(--mono); font-size: 11px; color: var(--blue); font-weight: 600; }
-  .issue-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tp); }
-  .issue-pts { font-family: var(--mono); font-size: 12px; color: var(--ts); text-align: center; }
-  .priority-dot { width: 6px; height: 6px; border-radius: 50%; justify-self: center; }
-  .assignee-cell { display: flex; align-items: center; gap: 4px; }
-  .assignee-cell span { font-size: 11px; color: var(--ts); }
-  .resolved-badge { font-family: var(--mono); font-size: 11px; color: var(--ts); }
-  .empty-state { padding: 24px; text-align: center; color: var(--tm); font-size: 12px; }
+.hdr-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.hdr-row{display:flex;align-items:center;gap:10px}
 
-  /* Avatar */
-  .avatar { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0; font-family: var(--sans); }
+.av-strip{display:flex;align-items:center}
+.av-strip .av{margin-left:-7px;border:2px solid var(--bg)}
+.av-strip .av:first-child{margin-left:0}
 
-  /* Velocity */
-  .velocity-body { padding: 14px; display: flex; align-items: center; gap: 14px; }
-  .ring-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
-  .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .ring-num { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--green); line-height: 1; }
-  .ring-sub { font-size: 10px; color: var(--tm); }
-  .vel-stat { margin-bottom: 8px; }
-  .vel-stat-label { font-size: 11px; color: var(--ts); }
-  .vel-stat-val { font-family: var(--mono); font-size: 16px; font-weight: 700; }
+.health-badge{display:flex;align-items:center;gap:6px;padding:5px 11px;
+  border-radius:20px;font-size:11px;font-weight:700;border:1px solid}
+.health-score{font-family:var(--mono);font-size:14px}
 
-  /* Burndown */
-  .burndown-body { padding: 10px 14px 8px; }
-  .burndown-note { font-size: 10px; color: var(--tm); padding: 8px 14px; border-top: 1px solid var(--border); }
-  .burndown-dates { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: var(--tm); }
-  .legend { display: flex; gap: 10px; font-size: 10px; color: var(--tm); align-items: center; }
-  .leg-line { width: 14px; height: 2px; display: inline-block; vertical-align: middle; margin-right: 3px; }
+.btn-refresh{display:flex;align-items:center;gap:5px;padding:6px 12px;
+  border-radius:6px;border:1px solid var(--b2);background:var(--s1);
+  color:var(--t2);cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:500;
+  transition:border-color .15s,color .15s,background .15s}
+.btn-refresh:hover{border-color:var(--blue);color:var(--t1);background:var(--blue2)}
+.btn-refresh:disabled{opacity:.5;cursor:not-allowed}
+.last-upd{font-size:10px;color:var(--t3)}
 
-  /* Workload */
-  .workload-body { padding: 10px 12px; }
-  .workload-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
-  .workload-row:last-child { margin-bottom: 0; }
-  .workload-meta { flex: 1; }
-  .workload-top { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; }
-  .workload-top .wname { color: var(--tp); }
-  .workload-top .wpts { font-family: var(--mono); color: var(--ts); }
-  .bar-track { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+/* ── KPI row ────────────────────────────────────────────────── */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+@media(max-width:960px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 
-  /* Assignee summary in workload */
-  .no-issues { color: var(--tm); font-size: 11px; font-style: italic; }
+.kpi{background:var(--s1);border:1px solid var(--b1);border-top:2px solid transparent;
+  border-radius:10px;padding:13px 14px;cursor:pointer;position:relative;overflow:hidden;
+  transition:transform .12s,box-shadow .12s}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent);pointer-events:none}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.kpi.sel{outline:1.5px solid var(--blue);outline-offset:-1px;background:rgba(59,130,246,.04)}
+.kpi-val{font-family:var(--mono);font-size:28px;font-weight:600;line-height:1;margin-bottom:4px}
+.kpi-name{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.kpi-detail{font-size:10px;color:var(--t2);margin-top:3px;font-family:var(--mono)}
+
+/* ── Main grid ──────────────────────────────────────────────── */
+.main-grid{display:grid;grid-template-columns:1fr 282px;gap:14px;align-items:start}
+@media(max-width:800px){.main-grid{grid-template-columns:1fr}}
+.sidebar{display:flex;flex-direction:column;gap:12px}
+
+/* ── Card ───────────────────────────────────────────────────── */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--b1);gap:8px}
+.card-title{font-size:12px;font-weight:600}
+.badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px}
+
+/* ── Filter bar ─────────────────────────────────────────────── */
+.filter-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:8px 12px;border-bottom:1px solid var(--b1)}
+.search-wrap{display:flex;align-items:center;gap:5px;background:var(--s2);
+  border:1px solid var(--b2);border-radius:6px;padding:3px 9px}
+.search-wrap input{background:none;border:none;outline:none;color:var(--t1);
+  font-family:var(--sans);font-size:11px;width:120px}
+.search-wrap input::placeholder{color:var(--t3)}
+.si{color:var(--t3);font-size:12px}
+.fpills{display:flex;gap:4px;flex-wrap:wrap}
+.fp{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;
+  border:1px solid var(--b1);background:transparent;color:var(--t2);
+  font-family:var(--sans);transition:border-color .12s,color .12s,background .12s}
+.fp:hover{border-color:var(--blue);color:var(--blue)}
+.fp.on{background:var(--blue2);border-color:var(--blue);color:var(--blue);font-weight:700}
+.fright{margin-left:auto;font-size:10px;color:var(--t3);font-family:var(--mono);white-space:nowrap}
+
+/* ── Table ──────────────────────────────────────────────────── */
+.cols{grid-template-columns:18px 82px 1fr 102px 34px 82px 7px}
+.th,.tr{display:grid;gap:8px;align-items:center;padding:6px 14px}
+.th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);
+  border-bottom:1px solid var(--b1);position:sticky;top:0;background:var(--s1);z-index:2}
+.th>span{cursor:pointer;user-select:none;transition:color .12s}
+.th>span:hover{color:var(--t1)}
+.th>span.asc::after{content:' ↑';color:var(--blue)}
+.th>span.desc::after{content:' ↓';color:var(--blue)}
+
+.tr{border-bottom:1px solid rgba(27,42,64,.5);text-decoration:none;
+  color:inherit;transition:background .1s}
+.tr:last-child{border-bottom:none}
+.tr:nth-child(even){background:rgba(255,255,255,.008)}
+.tr:hover{background:rgba(59,130,246,.065)!important}
+
+.tbl-body{max-height:460px;overflow-y:auto}
+.tbl-body::-webkit-scrollbar{width:4px}
+.tbl-body::-webkit-scrollbar-track{background:transparent}
+.tbl-body::-webkit-scrollbar-thumb{background:var(--b2);border-radius:4px}
+
+.type-ic{width:16px;height:16px;border-radius:3px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff}
+.ikey{font-family:var(--mono);font-size:11px;color:var(--blue);font-weight:500;white-space:nowrap}
+.isum{font-size:12px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spill{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.pts{font-family:var(--mono);font-size:12px;color:var(--t2);text-align:center}
+.asgn{display:flex;align-items:center;gap:5px;overflow:hidden}
+.asgn-name{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdot{width:6px;height:6px;border-radius:50%;justify-self:center}
+.empty{padding:36px;text-align:center;color:var(--t3);font-size:12px}
+
+/* ── Avatar ─────────────────────────────────────────────────── */
+.av{border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:#fff;overflow:hidden}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+
+/* ── Velocity ───────────────────────────────────────────────── */
+.vel-body{padding:14px;display:flex;align-items:center;gap:14px}
+.ring-wrap{position:relative;width:100px;height:100px;flex-shrink:0}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+.ring-big{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1}
+.ring-sm{font-size:10px;color:var(--t3);margin-top:1px}
+.vel-right{flex:1}
+.vs{margin-bottom:10px}
+.vs:last-child{margin-bottom:0}
+.vs-l{font-size:10px;color:var(--t2)}
+.vs-v{font-family:var(--mono);font-size:18px;font-weight:600}
+
+/* ── Burndown ───────────────────────────────────────────────── */
+.bd-body{padding:10px 14px 4px}
+.bd-dates{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:5px}
+.bd-note{padding:7px 14px 10px;font-size:10px;color:var(--t3);
+  line-height:1.5;border-top:1px solid var(--b1)}
+.leg{display:flex;gap:10px;align-items:center}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--t3)}
+.leg-ln{width:12px;height:2px;border-radius:1px}
+
+/* ── Workload ───────────────────────────────────────────────── */
+.wl-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px}
+.wl-row{display:flex;align-items:center;gap:8px;cursor:pointer;
+  border-radius:6px;padding:3px 4px;transition:background .1s}
+.wl-row:hover{background:rgba(255,255,255,.04)}
+.wl-row.sel-av{background:var(--blue2)}
+.wl-meta{flex:1;min-width:0}
+.wl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.wl-nm{font-size:11px;font-weight:500;color:var(--t1)}
+.wl-pts{font-family:var(--mono);font-size:10px;color:var(--t2)}
+.bar-t{height:3px;background:var(--b1);border-radius:3px;overflow:hidden}
+.bar-f{height:100%;border-radius:3px;width:0;transition:width .9s cubic-bezier(.4,0,.2,1)}
+
+/* ── Velocity history ───────────────────────────────────────── */
+.vh-body{padding:10px 14px 12px}
+.vh-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.vh-row:last-child{margin-bottom:0}
+.vh-lbl{font-size:10px;color:var(--t2);width:56px;flex-shrink:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vh-bw{flex:1;background:var(--b1);border-radius:3px;height:3px;overflow:hidden}
+.vh-bf{height:100%;border-radius:3px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.vh-val{font-family:var(--mono);font-size:10px;color:var(--t2);width:26px;text-align:right;flex-shrink:0}
+.vh-cur{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);width:26px;text-align:right;flex-shrink:0}
+
+/* ── Error / Loader ─────────────────────────────────────────── */
+.err{margin:16px;padding:14px 16px;background:var(--red2);border:1px solid rgba(239,68,68,.2);
+  border-radius:10px;color:var(--red);font-size:12px;line-height:1.6}
+.err strong{display:block;font-size:13px;margin-bottom:5px}
+.err code{background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;
+  font-family:var(--mono);font-size:11px}
+.loader{display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:44px;color:var(--t3);font-size:12px}
+.spinner{width:20px;height:20px;border:2px solid var(--b1);
+  border-top-color:var(--blue);border-radius:50%}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="shell">
 
-  <!-- ── CONFIG NOTICE (remove after filling in) ── -->
-  <div id="configNotice" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--amber);line-height:1.6">
-    <strong style="display:block;margin-bottom:4px">⚙ Configuration required</strong>
-    Open this file and fill in your <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_DOMAIN</code>,
-    <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_EMAIL</code>,
-    <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_API_TOKEN</code>, and
-    <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px">JIRA_BOARD_ID</code>
-    near the top of the &lt;script&gt; block.
+<!-- ══ HEADER ══════════════════════════════════════════════════ -->
+<div class="hdr">
+  <div>
+    <div class="eyebrow"><span class="live-dot"></span>Phoenix Project · Active Sprint</div>
+    <div class="sprint-title" id="spTitle">Loading sprint…</div>
+    <div class="sprint-meta" id="spMeta">Connecting to Jira…</div>
   </div>
-
-  <!-- Sprint header -->
-  <div class="sprint-header">
-    <div>
-      <div class="sprint-title" id="sprintTitle">
-        Loading sprint…
-        <span class="sprint-badge" id="sprintBadge">—</span>
-      </div>
-      <div class="sprint-sub" id="sprintSub">Fetching data from Jira…</div>
+  <div class="hdr-right">
+    <div class="hdr-row">
+      <div class="av-strip" id="avStrip"></div>
+      <div id="healthEl"></div>
     </div>
-    <div class="header-right">
-      <div class="member-strip" id="memberStrip"></div>
-      <div>
-        <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
-          <span class="ref-icon">↻</span> Refresh
-        </button>
-        <div class="last-updated" id="lastUpdated"></div>
-      </div>
+    <div class="hdr-row">
+      <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">
+        <span id="refreshIco">↻</span> Refresh
+      </button>
     </div>
-  </div>
-
-  <!-- Stats row -->
-  <div class="stats-row" id="statsRow">
-    <!-- populated by JS -->
-  </div>
-
-  <!-- Content grid -->
-  <div class="content-grid">
-
-    <!-- Issue table -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Sprint Issues</div>
-        <span class="resolved-badge" id="resolvedBadge">—</span>
-      </div>
-      <div class="filter-bar" id="filterBar">
-        <span style="color:var(--tm);font-size:11px">Loading…</span>
-      </div>
-      <div class="table-header">
-        <span></span><span>Key</span><span>Summary</span>
-        <span>Status</span><span>Pts</span><span>Assignee</span><span></span>
-      </div>
-      <div id="issueTable">
-        <div class="state-overlay"><div class="spinner"></div><span>Connecting to Jira…</span></div>
-      </div>
-    </div>
-
-    <!-- Right column -->
-    <div class="right-col">
-
-      <!-- Velocity -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Sprint velocity</div>
-          <span class="pill" id="velLabel" style="color:var(--blue);background:rgba(59,130,246,0.1)">—</span>
-        </div>
-        <div class="velocity-body">
-          <div class="ring-wrap">
-            <svg id="velocityRing" width="110" height="110" style="transform:rotate(-90deg)"></svg>
-            <div class="ring-label">
-              <span class="ring-num" id="velDone">—</span>
-              <span class="ring-sub" id="velTarget">/ — pts</span>
-            </div>
-          </div>
-          <div>
-            <div class="vel-stat">
-              <div class="vel-stat-label">Completed</div>
-              <div class="vel-stat-val" id="velDoneVal" style="color:var(--green)">—</div>
-            </div>
-            <div class="vel-stat" style="margin-bottom:0">
-              <div class="vel-stat-label">Remaining</div>
-              <div class="vel-stat-val" id="velRemVal" style="color:var(--tp)">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Burndown -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Burndown (estimated)</div>
-          <div class="legend">
-            <span><span class="leg-line" style="background:var(--blue)"></span>Actual</span>
-            <span><span class="leg-line" style="background:var(--tm);border-top:1px dashed var(--tm)"></span>Ideal</span>
-          </div>
-        </div>
-        <div class="burndown-body">
-          <svg id="burndownChart" width="100%" height="56" viewBox="0 0 260 56" preserveAspectRatio="none" style="overflow:visible;display:block"></svg>
-          <div class="burndown-dates"><span id="bdStart">—</span><span id="bdEnd">—</span></div>
-        </div>
-        <div class="burndown-note">⚠ Jira Cloud doesn't expose burndown via API — chart shows ideal vs current remaining pts</div>
-      </div>
-
-      <!-- Workload -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Team workload</div>
-        </div>
-        <div class="workload-body" id="workloadBody">
-          <div style="color:var(--tm);font-size:11px">Loading…</div>
-        </div>
-      </div>
-
-    </div>
+    <div class="last-upd" id="lastUpd"></div>
   </div>
 </div>
 
+<!-- ══ KPI ROW ══════════════════════════════════════════════════ -->
+<div class="kpi-row" id="kpiRow">
+  <div class="kpi"><div class="skeleton" style="height:28px;width:50px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:72px"></div></div>
+  <div class="kpi"><div class="skeleton" style="height:28px;width:50px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:72px"></div></div>
+  <div class="kpi"><div class="skeleton" style="height:28px;width:50px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:72px"></div></div>
+  <div class="kpi"><div class="skeleton" style="height:28px;width:50px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:72px"></div></div>
+  <div class="kpi"><div class="skeleton" style="height:28px;width:50px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:72px"></div></div>
+  <div class="kpi"><div class="skeleton" style="height:28px;width:50px;margin-bottom:6px"></div><div class="skeleton" style="height:10px;width:72px"></div></div>
+</div>
+
+<!-- ══ MAIN GRID ════════════════════════════════════════════════ -->
+<div class="main-grid">
+
+  <!-- Issue table -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Sprint Issues</span>
+      <span class="badge" id="resolvedBadge" style="background:var(--green2);color:var(--green)">—</span>
+    </div>
+    <div class="filter-bar" id="filterBar">
+      <div class="search-wrap">
+        <span class="si">⌕</span>
+        <input id="searchInput" placeholder="Search issues…" oninput="onSearch()" autocomplete="off" />
+      </div>
+      <div class="fpills" id="fpills"></div>
+      <span class="fright" id="fcount"></span>
+    </div>
+    <div class="th cols">
+      <span></span>
+      <span id="sh-key"     onclick="setSort('key')">Key</span>
+      <span id="sh-summary" onclick="setSort('summary')">Summary</span>
+      <span id="sh-status"  onclick="setSort('status')">Status</span>
+      <span id="sh-pts"     onclick="setSort('pts')">Pts</span>
+      <span id="sh-assignee"onclick="setSort('assignee')">Assignee</span>
+      <span></span>
+    </div>
+    <div class="tbl-body" id="tblBody">
+      <div class="loader"><div class="spinner spin"></div>Connecting to Jira…</div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+
+    <!-- Velocity ring -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Sprint velocity</span>
+        <span class="badge" id="velBadge" style="background:var(--blue2);color:var(--blue)">—</span>
+      </div>
+      <div class="vel-body">
+        <div class="ring-wrap">
+          <svg id="velSvg" width="100" height="100" style="transform:rotate(-90deg)"></svg>
+          <div class="ring-center">
+            <span class="ring-big" id="velDone">—</span>
+            <span class="ring-sm"  id="velOf">/ — pts</span>
+          </div>
+        </div>
+        <div class="vel-right">
+          <div class="vs"><div class="vs-l">Completed</div><div class="vs-v" id="velComp" style="color:var(--green)">—</div></div>
+          <div class="vs"><div class="vs-l">Remaining</div><div class="vs-v" id="velRem"  style="color:var(--t1)">—</div></div>
+          <div class="vs"><div class="vs-l">% Done</div>   <div class="vs-v" id="velPct"  style="color:var(--blue)">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Burndown -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Burndown (estimated)</span>
+        <div class="leg">
+          <div class="leg-item"><div class="leg-ln" style="background:var(--blue)"></div>Actual</div>
+          <div class="leg-item"><div class="leg-ln" style="background:var(--t3);border-top:1px dashed var(--t3)"></div>Ideal</div>
+        </div>
+      </div>
+      <div class="bd-body">
+        <svg id="bdSvg" width="100%" height="62" viewBox="0 0 252 62" preserveAspectRatio="none" style="overflow:visible;display:block"></svg>
+        <div class="bd-dates"><span id="bdStart">—</span><span id="bdEnd">—</span></div>
+      </div>
+      <div class="bd-note">⚠ Ideal vs current snapshot — full history requires Jira admin scope</div>
+    </div>
+
+    <!-- Workload -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Team workload</span>
+        <span style="font-size:10px;color:var(--t3)">click to filter</span>
+      </div>
+      <div class="wl-body" id="wlBody">
+        <div style="color:var(--t3);font-size:11px">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Velocity history (populated async) -->
+    <div class="card" id="vhCard" style="display:none">
+      <div class="card-head">
+        <span class="card-title">Recent velocity</span>
+        <span class="badge" style="background:var(--purple2);color:var(--purple)">HISTORY</span>
+      </div>
+      <div class="vh-body" id="vhBody"></div>
+    </div>
+
+  </div>
+</div>
+</div>
 <script>
-// ════════════════════════════════════════════════════════════════
-//  ▼▼▼  FILL IN YOUR DETAILS HERE  ▼▼▼
-// ════════════════════════════════════════════════════════════════
-const JIRA_DOMAIN    = "nhbc.atlassian.net";   // e.g. nhbc.atlassian.net
-const JIRA_EMAIL     = "cjclarke@nhbc.co.uk";       // your Atlassian account email
-const JIRA_API_TOKEN = "ATATT3xFfGF0mTMgj9ZdzdCfPIb4ZxI_LE8xtoN8LXtit6YlAfYGQsdgT2uAhilfYA4e_tNH9yx2FVgDFIag2Bv-UhZxDvElLFVa8TFzkTB56ivNDoBZCUL1Z5saqzbB5U09MYc89Ymsr2LGMFBv25Ik-hZmvNJGSkYeaNzKWxZ2u-xk_blzflw=14C693DA";         // from id.atlassian.com/manage-profile/security/api-tokens
-const JIRA_BOARD_ID  = "2766";                         // Board ID from your Jira board URL (?rapidView=123)
-const AUTO_REFRESH_MINS = 5;                          // Set to 0 to disable auto-refresh
-// ════════════════════════════════════════════════════════════════
-
-const isConfigured = () =>
-  JIRA_DOMAIN !== "YOUR-DOMAIN.atlassian.net" &&
-  JIRA_EMAIL  !== "your.email@nhbc.co.uk" &&
-  JIRA_API_TOKEN !== "YOUR_API_TOKEN_HERE" &&
-  JIRA_BOARD_ID !== "123";
-
-const AUTH = "Basic " + btoa(JIRA_EMAIL + ":" + JIRA_API_TOKEN);
-const BASE = "https://" + JIRA_DOMAIN;
-
-// Colour helpers
-const STATUS_COLORS = {
-  "To Do":       { color:"#7D8590", bg:"#21262D" },
-  "In Progress": { color:"#F59E0B", bg:"#2D1F06" },
-  "In Review":   { color:"#3B82F6", bg:"#0D1F3C" },
-  "Done":        { color:"#10B981", bg:"#052E16" },
-  "Blocked":     { color:"#EF4444", bg:"#2D0A0A" },
+/* ══════════════════════════════════════════════════════════════
+   CONFIG
+   ⚠ WARNING: credentials visible in page source on GitHub Pages.
+   Rotate token if this repo is public, or use a backend proxy.
+══════════════════════════════════════════════════════════════ */
+const CFG = {
+  domain:   'nhbc.atlassian.net',
+  email:    'cjclarke@nhbc.co.uk',
+  token:    'ATATT3xFfGF0mTMgj9ZdzdCfPIb4ZxI_LE8xtoN8LXtit6YlAfYGQsdgT2uAhilfYA4e_tNH9yx2FVgDFIag2Bv-UhZxDvElLFVa8TFzkTB56ivNDoBZCUL1Z5saqzbB5U09MYc89Ymsr2LGMFBv25Ik-hZmvNJGSkYeaNzKWxZ2u-xk_blzflw=14C693DA',
+  boardId:  '2766',
+  autoMins: 5,
 };
-const DEFAULT_SC = { color:"#7D8590", bg:"#21262D" };
+/* ══════════════════════════════════════════════════════════════ */
 
-function statusStyle(name) {
-  // fuzzy match
-  for (const [k,v] of Object.entries(STATUS_COLORS)) {
-    if (name.toLowerCase().includes(k.toLowerCase())) return v;
-  }
-  return DEFAULT_SC;
-}
+const BASE = 'https://' + CFG.domain;
+const AUTH = 'Basic ' + btoa(CFG.email + ':' + CFG.token);
 
-const TYPE_CONFIG = {
-  Story:    { label:"S",  bg:"#1D4ED8" },
-  Task:     { label:"✓", bg:"#374151" },
-  Bug:      { label:"⬥", bg:"#991B1B" },
-  Epic:     { label:"⚡", bg:"#5B21B6" },
-  Subtask:  { label:"↳", bg:"#374151" },
+/* ── Colour helpers ─────────────────────────────────────────── */
+const STATUS_MAP = [
+  { re:/done|complet|close|resolv/i,  color:'#10B981', bg:'#052E16' },
+  { re:/progress|active|start/i,       color:'#F59E0B', bg:'#2D1F06' },
+  { re:/review|test|qa|verif/i,        color:'#3B82F6', bg:'#0A1E3D' },
+  { re:/block/i,                        color:'#EF4444', bg:'#2D0A0A' },
+  { re:/to.?do|open|backlog|new/i,     color:'#7B8EA8', bg:'#1B2A40' },
+];
+const SC_DEF = { color:'#7B8EA8', bg:'#1B2A40' };
+function sc(name){ return STATUS_MAP.find(m=>m.re.test(name)) || SC_DEF; }
+
+const TYPE_MAP = {
+  Story:{l:'S',bg:'#1D4ED8'}, Task:{l:'✓',bg:'#374151'},
+  Bug:{l:'⬥',bg:'#991B1B'}, Epic:{l:'⚡',bg:'#5B21B6'},
+  Subtask:{l:'↳',bg:'#4B5563'},
 };
-function typeIcon(t) { return TYPE_CONFIG[t] || { label:t[0], bg:"#374151" }; }
+function tc(t){ return TYPE_MAP[t]||{l:(t||'?')[0].toUpperCase(),bg:'#374151'}; }
 
-const PRIORITY_COLORS = {
-  Highest:"#EF4444", High:"#F59E0B", Medium:"#3B82F6",
-  Low:"#7D8590", Lowest:"#484F58",
-};
-function prioColor(p) { return PRIORITY_COLORS[p] || "#484F58"; }
+const PRIO = {Highest:'#EF4444',High:'#F59E0B',Medium:'#3B82F6',Low:'#7B8EA8',Lowest:'#4B5568'};
+function pc(p){ return PRIO[p]||'#4B5568'; }
 
-// Avatar colour pool
-const AVATAR_POOL = ["#3B82F6","#10B981","#8B5CF6","#F59E0B","#EF4444","#EC4899","#14B8A6","#F97316"];
-const assigneeColors = {};
-let colorIdx = 0;
-function avatarColor(name) {
-  if (!assigneeColors[name]) assigneeColors[name] = AVATAR_POOL[colorIdx++ % AVATAR_POOL.length];
-  return assigneeColors[name];
+const AV_POOL=['#3B82F6','#10B981','#8B5CF6','#F59E0B','#EF4444','#EC4899','#14B8A6','#F97316','#06B6D4'];
+const avC={}; let avI=0;
+function avColor(n){ if(!avC[n]) avC[n]=AV_POOL[avI++%AV_POOL.length]; return avC[n]; }
+function initials(n){
+  if(!n) return '?';
+  const p=n.trim().split(' ');
+  return (p[0][0]+(p[1]?.[0]||'')).toUpperCase();
 }
-function initials(name) {
-  if (!name) return "?";
-  const parts = name.trim().split(" ");
-  return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
-}
-
-// ── State ─────────────────────────────────────────────────────
-let allIssues = [];
-let activeFilter = "all";
-let activeStat = null;
-let sprintInfo = null;
-
-// ── API helpers ───────────────────────────────────────────────
-async function jiraGet(path) {
-  const res = await fetch(BASE + path, {
-    headers: { "Authorization": AUTH, "Accept": "application/json" }
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Jira API ${res.status}: ${txt.slice(0,200)}`);
-  }
-  return res.json();
+function avHtml(assignee, size=24){
+  const name = assignee?.displayName||'Unassigned';
+  const url  = assignee?.avatarUrls?.['24x24'];
+  const sty  = `width:${size}px;height:${size}px`;
+  if(url) return `<div class="av" style="${sty}"><img src="${url}" /></div>`;
+  return `<div class="av" style="${sty};background:${avColor(name)}">${initials(name)}</div>`;
 }
 
-// ── Main load ─────────────────────────────────────────────────
-async function loadAll() {
-  if (!isConfigured()) {
-    document.getElementById("configNotice").style.display = "block";
-    showError("Fill in your Jira credentials in the CONFIG section at the top of the &lt;script&gt; block.");
-    return;
-  }
+/* ── State ──────────────────────────────────────────────────── */
+let allIssues=[], sprint=null;
+let sortKey='key', sortDir=1;
+let filterSt='all', filterAv=null, searchQ='', selKpi=null;
 
-  setRefreshing(true);
+/* ── API ────────────────────────────────────────────────────── */
+async function jira(path){
+  const r = await fetch(BASE+path,{headers:{Authorization:AUTH,Accept:'application/json'}});
+  if(!r.ok){ const t=await r.text(); throw new Error(`Jira ${r.status}: ${t.slice(0,300)}`); }
+  return r.json();
+}
 
-  try {
-    // 1. Get active sprint for board
-    const sprintData = await jiraGet(`/rest/agile/1.0/board/${JIRA_BOARD_ID}/sprint?state=active`);
-    if (!sprintData.values?.length) throw new Error("No active sprint found for board " + JIRA_BOARD_ID);
-    sprintInfo = sprintData.values[0];
+/* ── Main load ──────────────────────────────────────────────── */
+async function loadAll(){
+  setBusy(true);
+  try{
+    const sd = await jira(`/rest/agile/1.0/board/${CFG.boardId}/sprint?state=active`);
+    if(!sd.values?.length) throw new Error('No active sprint found for board '+CFG.boardId+'. Check your Board ID.');
+    sprint = sd.values[0];
 
-    // 2. Get all issues in sprint (paginate if needed)
-    let issues = [], startAt = 0, total = Infinity;
-    while (startAt < total) {
-      const chunk = await jiraGet(`/rest/agile/1.0/sprint/${sprintInfo.id}/issue?startAt=${startAt}&maxResults=100&fields=summary,status,issuetype,priority,assignee,story_points,customfield_10016`);
-      issues = issues.concat(chunk.issues);
-      total = chunk.total;
-      startAt += chunk.issues.length;
-      if (!chunk.issues.length) break;
+    const fields='summary,status,issuetype,priority,assignee,customfield_10016,story_points';
+    let issues=[],start=0,total=Infinity;
+    while(start<total){
+      const c = await jira(`/rest/agile/1.0/sprint/${sprint.id}/issue?startAt=${start}&maxResults=100&fields=${fields}`);
+      issues = issues.concat(c.issues);
+      total  = c.total;
+      start += c.issues.length;
+      if(!c.issues.length) break;
     }
     allIssues = issues;
 
-    // 3. Render everything
-    renderSprintHeader();
-    renderStats();
-    renderFilterBar();
+    renderHeader();
+    renderKpi();
+    renderPills();
     renderTable();
     renderVelocity();
     renderBurndown();
     renderWorkload();
 
-    // Update timestamp
-    const now = new Date();
-    document.getElementById("lastUpdated").textContent =
-      "Updated " + now.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
+    document.getElementById('lastUpd').textContent =
+      'Updated '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 
-    postHeight();
-  } catch(err) {
-    showError(err.message);
-  } finally {
-    setRefreshing(false);
+    fetchHistory(); // background
+    sync();
+  } catch(e){
+    showErr(e.message);
+  } finally{
+    setBusy(false);
   }
 }
 
-function setRefreshing(on) {
-  const btn = document.getElementById("refreshBtn");
-  btn.classList.toggle("spinning", on);
-  btn.disabled = on;
+/* ── Velocity history (background) ─────────────────────────── */
+async function fetchHistory(){
+  try{
+    const r = await jira(`/rest/agile/1.0/board/${CFG.boardId}/sprint?state=closed&maxResults=5`);
+    const recent = (r.values||[]).slice(-4).reverse();
+    if(!recent.length) return;
+    const rows = await Promise.all(recent.map(async s=>{
+      const d = await jira(`/rest/agile/1.0/sprint/${s.id}/issue?fields=status,customfield_10016&maxResults=250`);
+      const p = d.issues.reduce((a,i)=>{
+        if(/done|complet|close|resolv/i.test(i.fields.status.name))
+          a += parseFloat(i.fields.customfield_10016||0);
+        return a;
+      },0);
+      const label = s.name.replace(/^.*?sprint\s*/i,'Spr ').slice(0,10);
+      return {name:label, pts:Math.round(p), cur:false};
+    }));
+    const curDone = allIssues.filter(i=>/done|complet|close|resolv/i.test(i.fields.status.name))
+                              .reduce((a,i)=>a+pts(i),0);
+    renderHistory([{name:'Current',pts:Math.round(curDone),cur:true},...rows]);
+  } catch(e){/* silent */}
 }
 
-function showError(msg) {
-  document.getElementById("issueTable").innerHTML =
-    `<div class="state-overlay"><div class="error-box"><strong>⚠ Could not load Jira data</strong>${msg}<br><br>
-    Check your API token, domain, and board ID. Also ensure your browser allows cross-origin requests to Atlassian (some corporate proxies block this).</div></div>`;
-}
+/* ── Helpers ────────────────────────────────────────────────── */
+function pts(i){ return parseFloat(i.fields?.story_points||i.fields?.customfield_10016||0); }
+function isDone(i){ return /done|complet|close|resolv/i.test(i.fields.status.name); }
+function isBlock(i){ return /block/i.test(i.fields.status.name); }
 
-// ── Render: sprint header ─────────────────────────────────────
-function renderSprintHeader() {
-  const s = sprintInfo;
-  document.getElementById("sprintTitle").childNodes[0].textContent = s.name + " ";
-  document.getElementById("sprintBadge").textContent = s.state.toUpperCase();
-
-  const start = s.startDate ? new Date(s.startDate).toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : "?";
-  const end   = s.endDate   ? new Date(s.endDate).toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : "?";
-
-  // Days remaining
-  let daysLeft = "";
-  if (s.endDate) {
-    const diff = Math.ceil((new Date(s.endDate) - Date.now()) / 86400000);
-    daysLeft = diff > 0 ? ` · ${diff} day${diff!==1?"s":""} remaining` : " · Sprint ended";
+/* ── Header ─────────────────────────────────────────────────── */
+function renderHeader(){
+  document.getElementById('spTitle').textContent = sprint.name;
+  const fmt=d=>d?new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'?';
+  const blocked = allIssues.filter(isBlock).length;
+  let daysTag='';
+  if(sprint.endDate){
+    const diff=Math.ceil((new Date(sprint.endDate)-Date.now())/86400000);
+    daysTag = diff>0
+      ? `<span class="tag" style="color:var(--amber);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)">${diff}d left</span>`
+      : `<span class="tag" style="color:var(--red);border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08)">Ended</span>`;
   }
+  const blkTag = blocked
+    ? `<span class="tag" style="color:var(--red);border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08)">⚠ ${blocked} blocked</span>` : '';
+  document.getElementById('spMeta').innerHTML =
+    `${fmt(sprint.startDate)} – ${fmt(sprint.endDate)} · ${allIssues.length} issues ${daysTag} ${blkTag}`;
 
-  // Blocked count
-  const blocked = allIssues.filter(i => i.fields.status.name.toLowerCase().includes("block")).length;
-  const blockedHtml = blocked > 0
-    ? ` · <span style="color:var(--amber)">⚠ ${blocked} blocked</span>` : "";
-
-  document.getElementById("sprintSub").innerHTML = `${start} – ${end}${daysLeft}${blockedHtml}`;
-
-  // Members
-  const seen = new Set();
-  const strip = document.getElementById("memberStrip");
-  strip.innerHTML = "";
-  allIssues.forEach(i => {
-    const a = i.fields.assignee;
-    if (a && !seen.has(a.accountId)) {
-      seen.add(a.accountId);
-      const el = document.createElement("div");
-      el.className = "avatar";
-      el.style.background = avatarColor(a.displayName);
-      el.title = a.displayName;
-      // Use Jira avatar image if available
-      if (a.avatarUrls?.["24x24"]) {
-        el.innerHTML = `<img src="${a.avatarUrls["24x24"]}" width="22" height="22" style="border-radius:50%;display:block">`;
-      } else {
-        el.textContent = initials(a.displayName);
-      }
-      strip.appendChild(el);
-    }
+  // Avatars
+  const seen=new Set(), strip=document.getElementById('avStrip');
+  strip.innerHTML='';
+  allIssues.forEach(i=>{
+    const a=i.fields.assignee;
+    if(a&&!seen.has(a.accountId)){ seen.add(a.accountId); strip.insertAdjacentHTML('beforeend',avHtml(a,26)); }
   });
+
+  // Health badge
+  const h=calcHealth();
+  const [hc,hbg,hl] = h>=80
+    ? ['var(--green)','rgba(16,185,129,.1)','On Track']
+    : h>=50 ? ['var(--amber)','rgba(245,158,11,.1)','At Risk']
+    :         ['var(--red)',  'rgba(239,68,68,.1)', 'Off Track'];
+  document.getElementById('healthEl').innerHTML =
+    `<div class="health-badge" style="color:${hc};background:${hbg};border-color:${hc}50">
+       <span class="health-score">${h}</span><span>${hl}</span>
+     </div>`;
 }
 
-// ── Render: stats ─────────────────────────────────────────────
-function renderStats() {
-  const statuses = {};
-  allIssues.forEach(i => {
-    const s = i.fields.status.name;
-    statuses[s] = (statuses[s] || 0) + 1;
-  });
+function calcHealth(){
+  if(!allIssues.length) return 0;
+  let s=100;
+  s -= allIssues.filter(isBlock).length * 10;
+  s -= allIssues.filter(i=>!i.fields.assignee).length * 3;
+  if(sprint.startDate&&sprint.endDate){
+    const elapsed=(Date.now()-new Date(sprint.startDate))/(new Date(sprint.endDate)-new Date(sprint.startDate));
+    const donePct=allIssues.filter(isDone).length/allIssues.length;
+    if(elapsed>.5&&donePct<.2) s-=20;
+    if(elapsed>.75&&donePct<.5) s-=15;
+  }
+  return Math.max(0,Math.min(100,Math.round(s)));
+}
 
-  // Build canonical groups
-  const groups = [
-    { id:"todo",    label:"To Do",       color:"#7D8590", match: s => /to.?do|open|backlog/i.test(s) },
-    { id:"inprog",  label:"In Progress", color:"#F59E0B", match: s => /progress|active|start/i.test(s) },
-    { id:"review",  label:"In Review",   color:"#3B82F6", match: s => /review|test|qa/i.test(s) },
-    { id:"done",    label:"Done",        color:"#10B981", match: s => /done|complet|close|resolv/i.test(s) },
-    { id:"blocked", label:"Blocked",     color:"#EF4444", match: s => /block/i.test(s) },
+/* ── KPI cards ──────────────────────────────────────────────── */
+function renderKpi(){
+  const tPts=allIssues.reduce((a,i)=>a+pts(i),0);
+  const dPts=allIssues.filter(isDone).reduce((a,i)=>a+pts(i),0);
+  const groups=[
+    {id:'total',  color:'#EDF4FF',label:'Total',       val:allIssues.length,  detail:`${Math.round(tPts)} pts`},
+    {id:'todo',   color:'#7B8EA8',label:'To Do',       val:allIssues.filter(i=>/to.?do|open|backlog/i.test(i.fields.status.name)).length, detail:''},
+    {id:'inprog', color:'#F59E0B',label:'In Progress', val:allIssues.filter(i=>/progress|active|start/i.test(i.fields.status.name)).length, detail:''},
+    {id:'review', color:'#3B82F6',label:'In Review',   val:allIssues.filter(i=>/review|test|qa/i.test(i.fields.status.name)).length, detail:''},
+    {id:'done',   color:'#10B981',label:'Done',        val:allIssues.filter(isDone).length, detail:`${Math.round(dPts)} pts`},
+    {id:'blocked',color:'#EF4444',label:'Blocked',     val:allIssues.filter(isBlock).length, detail:allIssues.filter(isBlock).length?'needs attention':''},
   ];
-
-  // Count per group
-  groups.forEach(g => {
-    g.count = 0;
-    Object.entries(statuses).forEach(([s, n]) => { if (g.match(s)) g.count += n; });
-  });
-
-  const sr = document.getElementById("statsRow");
-  sr.innerHTML = "";
-  groups.forEach(g => {
-    const card = document.createElement("div");
-    card.className = "stat-card clickable" + (activeStat === g.id ? " active" : "");
-    card.style.borderTopColor = g.color;
-    card.innerHTML = `<div class="stat-num" style="color:${g.color}">${g.count}</div><div class="stat-label">${g.label}</div>`;
-    card.addEventListener("click", () => {
-      activeStat = activeStat === g.id ? null : g.id;
-      activeFilter = activeStat || "all";
-      renderStats();
-      renderFilterBar();
-      renderTable();
+  const row=document.getElementById('kpiRow');
+  row.innerHTML='';
+  groups.forEach(g=>{
+    const el=document.createElement('div');
+    el.className='kpi'+(selKpi===g.id?' sel':'');
+    el.style.borderTopColor=selKpi===g.id?g.color:'transparent';
+    el.innerHTML=`<div class="kpi-val" style="color:${g.color}">${g.val}</div>
+      <div class="kpi-name">${g.label}</div>
+      ${g.detail?`<div class="kpi-detail">${g.detail}</div>`:''}`;
+    el.addEventListener('click',()=>{
+      selKpi = selKpi===g.id ? null : g.id;
+      filterSt = selKpi ? g.id : 'all';
+      filterAv = null;
+      renderKpi(); renderPills(); renderTable();
     });
-    sr.appendChild(card);
+    row.appendChild(el);
   });
 }
 
-// ── Render: filter bar ────────────────────────────────────────
-function renderFilterBar() {
-  const fb = document.getElementById("filterBar");
-  fb.innerHTML = "";
-
-  // Collect unique statuses from real data
-  const statusNames = [...new Set(allIssues.map(i => i.fields.status.name))].sort();
-  const filters = [{ id:"all", label:"All issues" },
-    ...statusNames.map(s => ({ id:s, label:s }))
-  ];
-
-  filters.forEach(f => {
-    const btn = document.createElement("button");
-    btn.className = "filter-btn" + (activeFilter === f.id ? " active" : "");
-    const count = f.id === "all" ? allIssues.length : allIssues.filter(i => i.fields.status.name === f.id).length;
-    btn.textContent = f.label;
-    btn.addEventListener("click", () => {
-      activeFilter = f.id;
-      activeStat = null;
-      renderStats();
-      renderFilterBar();
-      renderTable();
-    });
-    fb.appendChild(btn);
-  });
-
-  // Resolved count
-  const fc = document.createElement("span");
-  fc.className = "filter-count";
-  const done = allIssues.filter(i => /done|complet|close|resolv/i.test(i.fields.status.name)).length;
-  fc.textContent = `${done}/${allIssues.length} resolved`;
-  fb.appendChild(fc);
-
-  document.getElementById("resolvedBadge").textContent = `${done}/${allIssues.length} resolved`;
+/* ── Filter pills ───────────────────────────────────────────── */
+function renderPills(){
+  const statuses=[...new Set(allIssues.map(i=>i.fields.status.name))].sort();
+  const pills=document.getElementById('fpills');
+  pills.innerHTML='';
+  const mk=(id,lbl)=>{
+    const b=document.createElement('button');
+    b.className='fp'+(filterSt===id?' on':'');
+    b.textContent=lbl;
+    b.addEventListener('click',()=>{ filterSt=id; selKpi=null; filterAv=null; renderKpi(); renderPills(); renderTable(); });
+    return b;
+  };
+  pills.appendChild(mk('all','All'));
+  statuses.forEach(s=>pills.appendChild(mk(s,s)));
+  updateCount();
 }
 
-// ── Render: issue table ───────────────────────────────────────
-function renderTable() {
-  const filtered = activeFilter === "all"
-    ? allIssues
-    : allIssues.filter(i => i.fields.status.name === activeFilter);
+function updateCount(){
+  const n=filtered().length, done=allIssues.filter(isDone).length;
+  document.getElementById('fcount').textContent=`${n} / ${allIssues.length}`;
+  document.getElementById('resolvedBadge').textContent=`${done}/${allIssues.length} done`;
+}
 
-  const tbl = document.getElementById("issueTable");
-  tbl.innerHTML = "";
-
-  if (!filtered.length) {
-    tbl.innerHTML = `<div class="empty-state">No issues match this filter</div>`;
-    postHeight(); return;
+/* ── Table ──────────────────────────────────────────────────── */
+function filtered(){
+  let list=allIssues;
+  if(filterSt!=='all'){
+    if     (filterSt==='todo')   list=list.filter(i=>/to.?do|open|backlog/i.test(i.fields.status.name));
+    else if(filterSt==='inprog') list=list.filter(i=>/progress|active|start/i.test(i.fields.status.name));
+    else if(filterSt==='review') list=list.filter(i=>/review|test|qa/i.test(i.fields.status.name));
+    else if(filterSt==='done')   list=list.filter(isDone);
+    else if(filterSt==='blocked')list=list.filter(isBlock);
+    else if(filterSt==='total')  list=list;
+    else list=list.filter(i=>i.fields.status.name===filterSt);
   }
-
-  filtered.forEach((issue, idx) => {
-    const f = issue.fields;
-    const tc = typeIcon(f.issuetype.name);
-    const sc = statusStyle(f.status.name);
-    const pts = f.story_points || f.customfield_10016 || "—";
-    const assigneeName = f.assignee?.displayName || "Unassigned";
-    const prio = f.priority?.name || "Medium";
-
-    const row = document.createElement("a");
-    row.className = "table-row" + (idx % 2 ? " odd" : "");
-    row.href = `${BASE}/browse/${issue.key}`;
-    row.target = "_blank";
-    row.rel = "noopener";
-    row.title = `Open ${issue.key} in Jira`;
-
-    // Avatar for assignee
-    let avatarHtml;
-    if (f.assignee?.avatarUrls?.["24x24"]) {
-      avatarHtml = `<img src="${f.assignee.avatarUrls["24x24"]}" width="22" height="22" style="border-radius:50%">`;
-    } else {
-      avatarHtml = `<div class="avatar" style="background:${avatarColor(assigneeName)}">${initials(assigneeName)}</div>`;
-    }
-
-    row.innerHTML = `
-      <div class="type-icon" style="background:${tc.bg}" title="${f.issuetype.name}">${tc.label}</div>
-      <span class="issue-key">${issue.key}</span>
-      <span class="issue-title" title="${f.summary}">${f.summary}</span>
-      <span class="pill" style="color:${sc.color};background:${sc.bg}">${f.status.name}</span>
-      <span class="issue-pts">${pts}</span>
-      <div class="assignee-cell">${avatarHtml}<span>${assigneeName.split(" ")[0]}</span></div>
-      <div class="priority-dot" style="background:${prioColor(prio)}" title="${prio}"></div>`;
-    tbl.appendChild(row);
+  if(filterAv) list=list.filter(i=>(i.fields.assignee?.displayName||'Unassigned')===filterAv);
+  if(searchQ)  list=list.filter(i=>i.key.toLowerCase().includes(searchQ)||i.fields.summary.toLowerCase().includes(searchQ));
+  return [...list].sort((a,b)=>{
+    let va,vb;
+    if     (sortKey==='key')     {va=a.key;vb=b.key;}
+    else if(sortKey==='summary') {va=a.fields.summary.toLowerCase();vb=b.fields.summary.toLowerCase();}
+    else if(sortKey==='status')  {va=a.fields.status.name;vb=b.fields.status.name;}
+    else if(sortKey==='pts')     {va=pts(a);vb=pts(b);}
+    else if(sortKey==='assignee'){va=a.fields.assignee?.displayName||'z';vb=b.fields.assignee?.displayName||'z';}
+    else return 0;
+    return (va<vb?-1:va>vb?1:0)*sortDir;
   });
-
-  postHeight();
 }
 
-// ── Render: velocity ring ─────────────────────────────────────
-function renderVelocity() {
-  const getPoints = issue => {
-    const f = issue.fields;
-    return parseFloat(f.story_points || f.customfield_10016 || 0);
-  };
-
-  const total = allIssues.reduce((s, i) => s + getPoints(i), 0);
-  const done  = allIssues
-    .filter(i => /done|complet|close|resolv/i.test(i.fields.status.name))
-    .reduce((s, i) => s + getPoints(i), 0);
-  const remaining = total - done;
-
-  document.getElementById("velLabel").textContent = sprintInfo?.name || "Sprint";
-  document.getElementById("velDone").textContent   = Math.round(done);
-  document.getElementById("velTarget").textContent = `/ ${Math.round(total)} pts`;
-  document.getElementById("velDoneVal").textContent = Math.round(done) + " pts";
-  document.getElementById("velRemVal").textContent  = Math.round(remaining) + " pts";
-
-  const pct = total > 0 ? done / total : 0;
-  const svg = document.getElementById("velocityRing");
-  svg.innerHTML = "";
-  const size = 110, cx = 55, r = (size - 14) / 2;
-  const circ = 2 * Math.PI * r;
-  const ns = "http://www.w3.org/2000/svg";
-  const mk = (tag, attrs) => {
-    const e = document.createElementNS(ns, tag);
-    Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k, v));
-    return e;
-  };
-  const strokeColor = pct >= 0.9 ? "#10B981" : pct >= 0.5 ? "#3B82F6" : "#F59E0B";
-  svg.appendChild(mk("circle", { cx, cy:cx, r, fill:"none", stroke:"#21262D", "stroke-width":7 }));
-  const arc = mk("circle", { cx, cy:cx, r, fill:"none", stroke:strokeColor, "stroke-width":7, "stroke-linecap":"round", "stroke-dasharray":`0 ${circ}` });
-  svg.appendChild(arc);
-  let start = null;
-  (function step(ts) {
-    if (!start) start = ts;
-    const p = Math.min((ts - start) / 1000, 1), ease = 1 - Math.pow(1 - p, 3);
-    arc.setAttribute("stroke-dasharray", `${ease * pct * circ} ${circ}`);
-    if (p < 1) requestAnimationFrame(step);
-  })(performance.now());
+function setSort(k){
+  if(sortKey===k) sortDir*=-1; else{sortKey=k;sortDir=1;}
+  document.querySelectorAll('.th>span').forEach(s=>s.classList.remove('asc','desc'));
+  const map={key:'key',summary:'summary',status:'status',pts:'pts',assignee:'assignee'};
+  const el=document.getElementById('sh-'+map[k]);
+  if(el) el.classList.add(sortDir===1?'asc':'desc');
+  renderTable();
 }
 
-// ── Render: burndown (ideal vs current snapshot) ──────────────
-function renderBurndown() {
-  const s = sprintInfo;
-  if (!s?.startDate || !s?.endDate) return;
-
-  const start = new Date(s.startDate);
-  const end   = new Date(s.endDate);
-  const now   = new Date();
-
-  document.getElementById("bdStart").textContent = start.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
-  document.getElementById("bdEnd").textContent   = end.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
-
-  const totalDays = Math.max(1, Math.round((end - start) / 86400000));
-  const elapsed   = Math.min(totalDays, Math.round((now - start) / 86400000));
-
-  const getPoints = i => parseFloat(i.fields.story_points || i.fields.customfield_10016 || 0);
-  const totalPts  = allIssues.reduce((s, i) => s + getPoints(i), 0);
-  const donePts   = allIssues.filter(i => /done|complet|close|resolv/i.test(i.fields.status.name))
-                              .reduce((s, i) => s + getPoints(i), 0);
-  const remaining = totalPts - donePts;
-
-  // Build a simple 2-point actual line: start → today's remaining
-  // and ideal line: start → end (0)
-  const W = 260, H = 56, max = totalPts || 1;
-  const ns = "http://www.w3.org/2000/svg";
-  const svg = document.getElementById("burndownChart");
-  svg.innerHTML = "";
-  const mk = (tag, attrs) => {
-    const e = document.createElementNS(ns, tag);
-    Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k, v));
-    return e;
-  };
-  const xScale = i => (i / totalDays) * W;
-  const yScale = v => H - (v / max) * H;
-
-  // Ideal
-  svg.appendChild(mk("path", {
-    d: `M0,0 L${W},${H}`, fill:"none", stroke:"#484F58", "stroke-width":"1.5", "stroke-dasharray":"4 3"
-  }));
-  // Actual (start full → today's remaining)
-  const ax = xScale(elapsed), ay = yScale(remaining);
-  svg.appendChild(mk("path", {
-    d:`M0,0 L${ax},${ay}`, fill:"none", stroke:"#3B82F6", "stroke-width":"2"
-  }));
-  // Dot at today
-  svg.appendChild(mk("circle", { cx:ax, cy:ay, r:"4", fill:"#3B82F6" }));
+function onSearch(){
+  searchQ=document.getElementById('searchInput').value.toLowerCase().trim();
+  renderTable(); updateCount();
 }
 
-// ── Render: workload ──────────────────────────────────────────
-function renderWorkload() {
-  const assigneeMap = {};
-  const getPoints = i => parseFloat(i.fields.story_points || i.fields.customfield_10016 || 0);
-
-  allIssues.forEach(i => {
-    const a = i.fields.assignee;
-    const name = a?.displayName || "Unassigned";
-    if (!assigneeMap[name]) {
-      assigneeMap[name] = {
-        name, pts: 0, count: 0,
-        avatar: a?.avatarUrls?.["24x24"] || null,
-        color: avatarColor(name)
-      };
-    }
-    assigneeMap[name].pts   += getPoints(i);
-    assigneeMap[name].count += 1;
-  });
-
-  const people = Object.values(assigneeMap).sort((a,b) => b.pts - a.pts);
-  const maxPts = people[0]?.pts || 1;
-
-  const body = document.getElementById("workloadBody");
-  body.innerHTML = "";
-
-  people.forEach(p => {
-    const pct = (p.pts / maxPts) * 100;
-    const row = document.createElement("div");
-    row.className = "workload-row";
-    const avatarHtml = p.avatar
-      ? `<img src="${p.avatar}" width="22" height="22" style="border-radius:50%;flex-shrink:0">`
-      : `<div class="avatar" style="background:${p.color}">${initials(p.name)}</div>`;
-    row.innerHTML = `
-      ${avatarHtml}
-      <div class="workload-meta">
-        <div class="workload-top">
-          <span class="wname">${p.name.split(" ")[0]}</span>
-          <span class="wpts">${Math.round(p.pts)} pts · ${p.count} issue${p.count!==1?"s":""}</span>
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:0%;background:${p.color}" data-w="${pct}"></div>
-        </div>
-      </div>`;
+function renderTable(){
+  const list=filtered();
+  const body=document.getElementById('tblBody');
+  body.innerHTML='';
+  updateCount();
+  if(!list.length){ body.innerHTML='<div class="empty">No issues match this filter</div>'; sync(); return; }
+  list.forEach((issue,idx)=>{
+    const f=issue.fields;
+    const typ=tc(f.issuetype?.name||'Task');
+    const col=sc(f.status.name);
+    const p=pts(issue);
+    const aName=f.assignee?.displayName||'Unassigned';
+    const prio=f.priority?.name||'Medium';
+    const row=document.createElement('a');
+    row.className='tr cols'+(idx%2?' stripe':'');
+    row.href=`${BASE}/browse/${issue.key}`;
+    row.target='_blank'; row.rel='noopener';
+    row.innerHTML=`
+      <div class="type-ic" style="background:${typ.bg}" title="${f.issuetype?.name||''}">${typ.l}</div>
+      <span class="ikey">${issue.key}</span>
+      <span class="isum" title="${f.summary}">${f.summary}</span>
+      <span class="spill" style="color:${col.color};background:${col.bg}">${f.status.name}</span>
+      <span class="pts">${p||'—'}</span>
+      <div class="asgn">${avHtml(f.assignee,22)}<span class="asgn-name">${aName.split(' ')[0]}</span></div>
+      <div class="pdot" style="background:${pc(prio)}" title="${prio}"></div>`;
     body.appendChild(row);
   });
+  sync();
+}
 
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    document.querySelectorAll(".bar-fill").forEach(el => el.style.width = el.dataset.w + "%");
+/* ── Velocity ring ──────────────────────────────────────────── */
+function renderVelocity(){
+  const total=allIssues.reduce((a,i)=>a+pts(i),0);
+  const done =allIssues.filter(isDone).reduce((a,i)=>a+pts(i),0);
+  const rem  =total-done;
+  const pct  =total>0?done/total:0;
+  document.getElementById('velBadge').textContent=sprint?.name||'Sprint';
+  document.getElementById('velDone').textContent =Math.round(done);
+  document.getElementById('velOf').textContent   =`/ ${Math.round(total)} pts`;
+  document.getElementById('velComp').textContent =Math.round(done)+' pts';
+  document.getElementById('velRem').textContent  =Math.round(rem)+' pts';
+  document.getElementById('velPct').textContent  =Math.round(pct*100)+'%';
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('velSvg');
+  svg.innerHTML='';
+  const cx=50,r=38,circ=2*Math.PI*r;
+  const mk=(t,a)=>{ const e=document.createElementNS(ns,t); Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
+  const arcC=pct>=.9?'#10B981':pct>=.5?'#3B82F6':'#F59E0B';
+  svg.appendChild(mk('circle',{cx,cy:cx,r,fill:'none',stroke:'#1B2A40','stroke-width':'7'}));
+  const arc=mk('circle',{cx,cy:cx,r,fill:'none',stroke:arcC,'stroke-width':'7','stroke-linecap':'round','stroke-dasharray':`0 ${circ}`});
+  svg.appendChild(arc);
+  let st=null;
+  (function step(ts){
+    if(!st)st=ts;
+    const p=Math.min((ts-st)/900,1),e=1-Math.pow(1-p,3);
+    arc.setAttribute('stroke-dasharray',`${e*pct*circ} ${circ}`);
+    if(p<1)requestAnimationFrame(step);
+  })(performance.now());
+  document.getElementById('velDone').style.color=arcC;
+}
+
+/* ── Burndown ───────────────────────────────────────────────── */
+function renderBurndown(){
+  if(!sprint?.startDate||!sprint?.endDate) return;
+  const start=new Date(sprint.startDate), end=new Date(sprint.endDate);
+  document.getElementById('bdStart').textContent=start.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  document.getElementById('bdEnd').textContent  =end.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const totalDays=Math.max(1,(end-start)/86400000);
+  const elapsed  =Math.min(totalDays,(Date.now()-start)/86400000);
+  const totalPts =allIssues.reduce((a,i)=>a+pts(i),0);
+  const donePts  =allIssues.filter(isDone).reduce((a,i)=>a+pts(i),0);
+  const rem      =totalPts-donePts, max=totalPts||1;
+  const W=252,H=62,ns='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('bdSvg');
+  svg.innerHTML='';
+  const mk=(t,a)=>{ const e=document.createElementNS(ns,t); Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
+  const xS=v=>(v/totalDays)*W, yS=v=>H-(v/max)*H;
+  // grid
+  [0,.25,.5,.75,1].forEach(f=>svg.appendChild(mk('line',{x1:0,y1:f*H,x2:W,y2:f*H,stroke:'#1B2A40','stroke-width':'1'})));
+  // ideal
+  svg.appendChild(mk('path',{d:`M0,0 L${W},${H}`,fill:'none',stroke:'#3E5068','stroke-width':'1.5','stroke-dasharray':'4 3'}));
+  // actual
+  const ax=xS(elapsed),ay=yS(rem);
+  svg.appendChild(mk('path',{d:`M0,0 L${ax},${ay}`,fill:'none',stroke:'#3B82F6','stroke-width':'2.5'}));
+  if(elapsed<totalDays){
+    svg.appendChild(mk('path',{d:`M${ax},${ay} L${W},${H}`,fill:'none',stroke:'#3B82F6','stroke-width':'1.5','stroke-dasharray':'3 2',opacity:'.4'}));
+  }
+  const idealNow=max*(1-elapsed/totalDays);
+  const dotC=rem<=idealNow?'#10B981':'#EF4444';
+  svg.appendChild(mk('circle',{cx:ax,cy:ay,r:'5',fill:dotC,opacity:'.25'}));
+  svg.appendChild(mk('circle',{cx:ax,cy:ay,r:'3',fill:dotC}));
+}
+
+/* ── Workload ───────────────────────────────────────────────── */
+function renderWorkload(){
+  const map={};
+  allIssues.forEach(i=>{
+    const a=i.fields.assignee, name=a?.displayName||'Unassigned';
+    if(!map[name]) map[name]={name,pts:0,count:0,assignee:a,color:avColor(name)};
+    map[name].pts  +=pts(i);
+    map[name].count+=1;
+  });
+  const people=Object.values(map).sort((a,b)=>b.pts-a.pts);
+  const maxP=people[0]?.pts||1;
+  const body=document.getElementById('wlBody');
+  body.innerHTML='';
+  people.forEach(p=>{
+    const pct=(p.pts/maxP)*100;
+    const row=document.createElement('div');
+    row.className='wl-row'+(filterAv===p.name?' sel-av':'');
+    row.innerHTML=`${avHtml(p.assignee,24)}
+      <div class="wl-meta">
+        <div class="wl-top">
+          <span class="wl-nm">${p.name.split(' ')[0]}</span>
+          <span class="wl-pts">${Math.round(p.pts)} pts · ${p.count} issue${p.count!==1?'s':''}</span>
+        </div>
+        <div class="bar-t"><div class="bar-f" style="background:${p.color}" data-w="${pct}"></div></div>
+      </div>`;
+    row.addEventListener('click',()=>{
+      filterAv = filterAv===p.name ? null : p.name;
+      filterSt='all'; selKpi=null;
+      renderKpi(); renderPills(); renderTable(); renderWorkload();
+    });
+    body.appendChild(row);
+  });
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll('.bar-f').forEach(el=>{ el.style.width=el.dataset.w+'%'; });
   }));
 }
 
-// ── Height posting for Confluence iframe ──────────────────────
-function postHeight() {
-  try { window.parent.postMessage({ type:"dashboard-height", height:document.body.scrollHeight }, "*"); } catch(e) {}
+/* ── Velocity history ───────────────────────────────────────── */
+function renderHistory(data){
+  if(!data.length) return;
+  const maxV=Math.max(...data.map(d=>d.pts))||1;
+  const body=document.getElementById('vhBody');
+  body.innerHTML='';
+  data.forEach(d=>{
+    const pct=(d.pts/maxV)*100;
+    const el=document.createElement('div');
+    el.className='vh-row';
+    el.innerHTML=`
+      <span class="vh-lbl" title="${d.name}">${d.name}</span>
+      <div class="vh-bw"><div class="vh-bf" style="background:${d.cur?'var(--blue)':'var(--purple)'}" data-w="${pct}"></div></div>
+      <span class="${d.cur?'vh-cur':'vh-val'}">${d.pts}</span>`;
+    body.appendChild(el);
+  });
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll('.vh-bf').forEach(el=>{ el.style.width=el.dataset.w+'%'; });
+  }));
+  document.getElementById('vhCard').style.display='';
 }
-window.addEventListener("resize", postHeight);
 
-// ── Auto-refresh ──────────────────────────────────────────────
-if (AUTO_REFRESH_MINS > 0) {
-  setInterval(loadAll, AUTO_REFRESH_MINS * 60 * 1000);
+/* ── Utils ──────────────────────────────────────────────────── */
+function showErr(msg){
+  document.getElementById('tblBody').innerHTML=
+    `<div class="err"><strong>⚠ Could not load Jira data</strong>${msg}<br><br>
+    Check <code>domain</code>, <code>email</code>, <code>token</code>, <code>boardId</code> in the CFG block.
+    Some corporate proxies block cross-origin requests to Atlassian.</div>`;
 }
+function setBusy(on){
+  const btn=document.getElementById('refreshBtn');
+  btn.disabled=on;
+  document.getElementById('refreshIco').className=on?'spin':'';
+}
+function sync(){
+  try{ window.parent.postMessage({type:'dashboard-height',height:document.body.scrollHeight},'*'); }catch(e){}
+}
+window.addEventListener('resize',sync);
 
-// ── Boot ──────────────────────────────────────────────────────
+if(CFG.autoMins>0) setInterval(loadAll,CFG.autoMins*60*1000);
 loadAll();
 </script>
 </body>
