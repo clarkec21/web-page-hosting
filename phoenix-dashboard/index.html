@@ -25,148 +25,69 @@
     --sans: 'Inter', system-ui, sans-serif;
   }
 
-  body {
+  html, body {
     background: var(--bg);
     color: var(--text-primary);
     font-family: var(--sans);
     font-size: 13px;
-    min-height: 100vh;
+    /* No min-height: 100vh — let content define height for iframe */
+    overflow-x: hidden;
   }
 
-  /* Topbar */
-  .topbar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
+  .wrap { padding: 20px; }
+
+  /* Sprint header bar */
+  .sprint-header {
     display: flex;
     align-items: center;
-    gap: 24px;
-    height: 48px;
-  }
-  .logo {
-    font-family: var(--mono);
-    font-weight: 700;
-    font-size: 15px;
-    color: var(--blue);
-    letter-spacing: -0.5px;
-  }
-  .breadcrumb {
-    color: var(--text-secondary);
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .breadcrumb .current { color: var(--text-primary); font-weight: 500; }
-  .spacer { flex: 1; }
-  .member-strip { display: flex; align-items: center; gap: 8px; }
-  .member-strip span { color: var(--text-secondary); font-size: 12px; margin-left: 4px; }
-
-  /* Layout */
-  .body { display: flex; min-height: calc(100vh - 48px); }
-
-  /* Sidebar */
-  .sidebar {
-    width: 220px;
-    border-right: 1px solid var(--border);
-    background: var(--surface);
-    flex-shrink: 0;
-    padding: 20px 0;
-  }
-  .side-section { padding: 0 16px 20px; }
-  .project-badge {
-    background: linear-gradient(135deg, #1D4ED8, #3B82F6);
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 20px;
-  }
-  .project-badge .proj-name { font-weight: 700; font-size: 14px; }
-  .project-badge .proj-sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
-  .side-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-  }
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    font-size: 13px;
-    margin-bottom: 2px;
-    border: none;
-    background: transparent;
-    width: 100%;
-    text-align: left;
-    transition: background 0.15s, color 0.15s;
-  }
-  .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
-  .nav-item.active { color: var(--blue); background: rgba(59,130,246,0.08); font-weight: 600; }
-  .nav-icon { width: 16px; text-align: center; }
-  .side-divider { border: none; border-top: 1px solid var(--border); margin: 0 16px 20px; }
-
-  /* Main */
-  .main { flex: 1; padding: 24px 28px; overflow: auto; }
-  .page-header {
-    display: flex;
-    align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
   }
-  .page-title { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
-  .page-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-  .btn-group { display: flex; gap: 8px; }
-  .btn-ghost {
-    padding: 7px 14px; border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface); color: var(--text-secondary);
-    cursor: pointer; font-size: 12px; font-family: var(--sans);
+  .sprint-title-group {}
+  .sprint-title {
+    font-size: 17px; font-weight: 700; letter-spacing: -0.4px;
+    display: flex; align-items: center; gap: 10px;
   }
-  .btn-primary {
-    padding: 7px 14px; border-radius: 6px; border: none;
-    background: var(--blue); color: #fff;
-    cursor: pointer; font-size: 12px; font-weight: 600; font-family: var(--sans);
+  .sprint-badge {
+    font-size: 10px; font-weight: 700;
+    background: rgba(59,130,246,0.15); color: var(--blue);
+    padding: 2px 8px; border-radius: 20px;
+    letter-spacing: 0.04em;
   }
+  .sprint-sub { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+  .member-strip { display: flex; align-items: center; gap: 6px; }
+  .member-strip .label { color: var(--text-secondary); font-size: 11px; margin-left: 4px; }
 
   /* Stats row */
   .stats-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 16px;
   }
   .stat-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 14px 16px;
+    padding: 12px 14px;
     border-top: 3px solid transparent;
   }
   .stat-num {
     font-family: var(--mono);
-    font-size: 26px;
-    font-weight: 700;
-    line-height: 1;
-    margin-bottom: 4px;
+    font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 3px;
   }
   .stat-label {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: 10px; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.08em;
   }
 
   /* Content grid */
   .content-grid {
     display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 16px;
+    grid-template-columns: 1fr 284px;
+    gap: 14px;
     align-items: start;
   }
 
@@ -178,543 +99,370 @@
     overflow: hidden;
   }
   .card-header {
-    padding: 12px 16px;
+    padding: 11px 14px;
     border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
   }
-  .card-title { font-weight: 600; font-size: 13px; }
-  .right-col { display: flex; flex-direction: column; gap: 14px; }
+  .card-title { font-weight: 600; font-size: 12px; }
+  .right-col { display: flex; flex-direction: column; gap: 12px; }
 
   /* Pills */
-  .pill {
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-  }
+  .pill { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
   /* Filter bar */
   .filter-bar {
-    display: flex;
-    gap: 6px;
-    padding: 10px 16px;
+    display: flex; gap: 5px;
+    padding: 8px 14px;
     border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
   }
   .filter-btn {
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-secondary);
-    font-family: var(--sans);
-    transition: all 0.15s;
+    padding: 2px 9px; border-radius: 20px; font-size: 11px;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text-secondary);
+    font-family: var(--sans); transition: all 0.12s;
   }
   .filter-btn.active {
     border-color: var(--blue);
     background: rgba(59,130,246,0.12);
-    color: var(--blue);
-    font-weight: 700;
+    color: var(--blue); font-weight: 700;
   }
 
   /* Table */
   .table-header {
     display: grid;
-    grid-template-columns: 28px 90px 1fr 90px 36px 80px 32px;
-    gap: 10px;
-    padding: 7px 16px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    border-bottom: 1px solid var(--border);
+    grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
+    gap: 8px; padding: 6px 14px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted); border-bottom: 1px solid var(--border);
   }
   .table-row {
     display: grid;
-    grid-template-columns: 28px 90px 1fr 90px 36px 80px 32px;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 16px;
+    grid-template-columns: 24px 82px 1fr 88px 34px 72px 20px;
+    align-items: center; gap: 8px;
+    padding: 8px 14px;
     border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.1s;
+    cursor: pointer; transition: background 0.1s;
   }
+  .table-row:last-child { border-bottom: none; }
   .table-row:hover { background: rgba(255,255,255,0.03); }
-  .table-row.even { background: transparent; }
   .table-row.odd { background: rgba(255,255,255,0.01); }
   .type-icon {
-    width: 20px; height: 20px;
-    border-radius: 4px;
+    width: 18px; height: 18px; border-radius: 3px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 9px; font-weight: 700; color: #fff;
-    flex-shrink: 0;
+    font-size: 8px; font-weight: 700; color: #fff; flex-shrink: 0;
   }
-  .issue-key {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--blue);
-    font-weight: 600;
-  }
-  .issue-title {
-    font-size: 12px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .issue-pts {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--text-secondary);
-    text-align: center;
-  }
-  .priority-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    justify-self: center;
-  }
-  .assignee-cell { display: flex; align-items: center; gap: 5px; }
+  .issue-key { font-family: var(--mono); font-size: 11px; color: var(--blue); font-weight: 600; }
+  .issue-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .issue-pts { font-family: var(--mono); font-size: 12px; color: var(--text-secondary); text-align: center; }
+  .priority-dot { width: 6px; height: 6px; border-radius: 50%; justify-self: center; }
+  .assignee-cell { display: flex; align-items: center; gap: 4px; }
   .assignee-cell span { font-size: 11px; color: var(--text-secondary); }
+  .resolved-badge { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); }
 
   /* Avatar */
   .avatar {
-    width: 24px; height: 24px;
-    border-radius: 50%;
+    width: 22px; height: 22px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; color: #fff;
-    flex-shrink: 0;
-    font-family: var(--sans);
+    font-size: 9px; font-weight: 700; color: #fff;
+    flex-shrink: 0; font-family: var(--sans);
   }
 
-  /* Velocity */
-  .velocity-body { padding: 16px; display: flex; align-items: center; gap: 16px; }
-  .ring-wrap { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+  /* Velocity card */
+  .velocity-body { padding: 14px; display: flex; align-items: center; gap: 14px; }
+  .ring-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
   .ring-label {
     position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  .ring-num {
-    font-family: var(--mono);
-    font-size: 22px; font-weight: 700;
-    color: var(--green); line-height: 1;
-  }
+  .ring-num { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--green); line-height: 1; }
   .ring-sub { font-size: 10px; color: var(--text-muted); }
   .vel-stat { margin-bottom: 8px; }
   .vel-stat-label { font-size: 11px; color: var(--text-secondary); }
-  .vel-stat-val {
-    font-family: var(--mono);
-    font-size: 18px; font-weight: 700;
-  }
+  .vel-stat-val { font-family: var(--mono); font-size: 16px; font-weight: 700; }
 
   /* Burndown */
-  .burndown-body { padding: 12px 16px 10px; }
-  .burndown-dates {
-    display: flex; justify-content: space-between;
-    margin-top: 4px;
-    font-size: 10px; color: var(--text-muted);
-  }
+  .burndown-body { padding: 10px 14px 8px; }
+  .burndown-dates { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: var(--text-muted); }
   .legend { display: flex; gap: 10px; font-size: 10px; color: var(--text-muted); align-items: center; }
-  .leg-line { width: 16px; height: 2px; display: inline-block; }
+  .leg-line { width: 14px; height: 2px; display: inline-block; vertical-align: middle; margin-right: 3px; }
 
   /* Workload */
-  .workload-body { padding: 12px; }
-  .workload-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .workload-body { padding: 10px 12px; }
+  .workload-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .workload-row:last-child { margin-bottom: 0; }
   .workload-meta { flex: 1; }
-  .workload-top {
-    display: flex; justify-content: space-between; margin-bottom: 4px;
-    font-size: 11px;
-  }
+  .workload-top { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; }
   .workload-top .name { color: var(--text-primary); }
   .workload-top .pts { font-family: var(--mono); color: var(--text-secondary); }
-  .bar-track {
-    height: 4px; background: var(--border);
-    border-radius: 4px; overflow: hidden;
-  }
+  .bar-track { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 4px; }
 
-  /* Resolved badge */
-  .resolved-badge { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); }
+  /* Auto-resize helper — posts height to parent so Confluence iframe can resize */
+  /* (Requires allowfullscreen or allow="same-origin" on iframe — fallback graceful) */
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<!-- Topbar -->
-<div class="topbar">
-  <div class="logo">◈ NHBC</div>
-  <div class="breadcrumb">
-    <span>Projects</span>
-    <span style="color:var(--text-muted)">›</span>
-    <span class="current">Phoenix</span>
+  <!-- Sprint header -->
+  <div class="sprint-header">
+    <div class="sprint-title-group">
+      <div class="sprint-title">
+        Sprint 14 · Phoenix
+        <span class="sprint-badge">ACTIVE</span>
+      </div>
+      <div class="sprint-sub">Jun 9 – Jun 20, 2026 &nbsp;·&nbsp; 2 days remaining &nbsp;·&nbsp; <span style="color:var(--amber)">⚠ 2 blocked</span></div>
+    </div>
+    <div class="member-strip" id="memberStrip"></div>
   </div>
-  <div class="spacer"></div>
-  <div class="member-strip" id="memberStrip"></div>
-</div>
 
-<div class="body">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="side-section">
-      <div class="project-badge">
-        <div class="proj-name">Phoenix</div>
-        <div class="proj-sub">Software project · Active</div>
-      </div>
-      <div class="side-label">Planning</div>
-      <button class="nav-item active"><span class="nav-icon">▤</span>Board</button>
-      <button class="nav-item"><span class="nav-icon">↗</span>Backlog</button>
-      <button class="nav-item"><span class="nav-icon">◎</span>Roadmap</button>
-    </div>
-    <hr class="side-divider" />
-    <div class="side-section">
-      <div class="side-label">Reporting</div>
-      <button class="nav-item"><span class="nav-icon">⚡</span>Velocity</button>
-      <button class="nav-item"><span class="nav-icon">↘</span>Burndown</button>
-      <button class="nav-item"><span class="nav-icon">◈</span>Releases</button>
-    </div>
-  </aside>
+  <!-- Stats row -->
+  <div class="stats-row" id="statsRow"></div>
 
-  <!-- Main -->
-  <main class="main">
-    <div class="page-header">
-      <div>
-        <div class="page-title">Sprint 14 · Phoenix</div>
-        <div class="page-sub">Jun 9 – Jun 20, 2026 &nbsp;·&nbsp; 2 days remaining</div>
+  <!-- Content grid -->
+  <div class="content-grid">
+
+    <!-- Issue table -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Sprint Issues</div>
+        <span class="resolved-badge" id="resolvedBadge"></span>
       </div>
-      <div class="btn-group">
-        <button class="btn-ghost">⚙ Configure board</button>
-        <button class="btn-primary">+ Create issue</button>
+      <div class="filter-bar" id="filterBar"></div>
+      <div class="table-header">
+        <span></span><span>Key</span><span>Summary</span>
+        <span>Status</span><span>Pts</span><span>Assignee</span><span></span>
       </div>
+      <div id="issueTable"></div>
     </div>
 
-    <!-- Stats row -->
-    <div class="stats-row" id="statsRow"></div>
+    <!-- Right column -->
+    <div class="right-col">
 
-    <!-- Content grid -->
-    <div class="content-grid">
-      <!-- Issue table -->
+      <!-- Velocity -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Sprint Issues</div>
-          <span class="resolved-badge" id="resolvedBadge"></span>
+          <div class="card-title">Sprint velocity</div>
+          <span class="pill" style="color:var(--blue);background:rgba(59,130,246,0.1)">Sprint 14</span>
         </div>
-        <div class="filter-bar" id="filterBar"></div>
-        <div class="table-header">
-          <span></span><span>Key</span><span>Summary</span>
-          <span>Status</span><span>Pts</span><span>Assignee</span><span></span>
+        <div class="velocity-body">
+          <div class="ring-wrap">
+            <svg id="velocityRing" width="110" height="110" style="transform:rotate(-90deg)"></svg>
+            <div class="ring-label">
+              <span class="ring-num">72</span>
+              <span class="ring-sub">/ 80 pts</span>
+            </div>
+          </div>
+          <div>
+            <div class="vel-stat">
+              <div class="vel-stat-label">Completed</div>
+              <div class="vel-stat-val" style="color:var(--green)">72 pts</div>
+            </div>
+            <div class="vel-stat" style="margin-bottom:0">
+              <div class="vel-stat-label">Target</div>
+              <div class="vel-stat-val" style="color:var(--text-primary)">80 pts</div>
+            </div>
+          </div>
         </div>
-        <div id="issueTable"></div>
       </div>
 
-      <!-- Right column -->
-      <div class="right-col">
-        <!-- Velocity -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Sprint velocity</div>
-            <span class="pill" style="color:var(--blue);background:rgba(59,130,246,0.1)">Sprint 14</span>
-          </div>
-          <div class="velocity-body">
-            <div class="ring-wrap">
-              <svg id="velocityRing" width="120" height="120" style="transform:rotate(-90deg)"></svg>
-              <div class="ring-label">
-                <span class="ring-num">72</span>
-                <span class="ring-sub">/ 80 pts</span>
-              </div>
-            </div>
-            <div>
-              <div class="vel-stat">
-                <div class="vel-stat-label">Completed</div>
-                <div class="vel-stat-val" style="color:var(--green)">72 pts</div>
-              </div>
-              <div class="vel-stat">
-                <div class="vel-stat-label">Target</div>
-                <div class="vel-stat-val" style="color:var(--text-primary)">80 pts</div>
-              </div>
-            </div>
+      <!-- Burndown -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Burndown</div>
+          <div class="legend">
+            <span><span class="leg-line" style="background:var(--blue)"></span>Actual</span>
+            <span><span class="leg-line" style="background:var(--text-muted);border-top:1px dashed var(--text-muted)"></span>Ideal</span>
           </div>
         </div>
-
-        <!-- Burndown -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Burndown</div>
-            <div class="legend">
-              <span><span class="leg-line" style="background:var(--blue)"></span> Actual</span>
-              <span><span class="leg-line" style="background:var(--text-muted);border-top:1px dashed"></span> Ideal</span>
-            </div>
-          </div>
-          <div class="burndown-body">
-            <svg id="burndownChart" width="268" height="60" viewBox="0 0 268 60" style="overflow:visible"></svg>
-            <div class="burndown-dates"><span>Jun 9</span><span>Jun 20</span></div>
-          </div>
-        </div>
-
-        <!-- Workload -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Team workload</div>
-          </div>
-          <div class="workload-body" id="workloadBody"></div>
+        <div class="burndown-body">
+          <svg id="burndownChart" width="100%" height="56" viewBox="0 0 260 56" preserveAspectRatio="none" style="overflow:visible;display:block"></svg>
+          <div class="burndown-dates"><span>Jun 9</span><span>Jun 20</span></div>
         </div>
       </div>
+
+      <!-- Workload -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Team workload</div>
+        </div>
+        <div class="workload-body" id="workloadBody"></div>
+      </div>
+
     </div>
-  </main>
+  </div>
 </div>
 
 <script>
-const COLORS = {
-  bg: "#0D1117", surface: "#161B22", border: "#21262D",
-  blue: "#3B82F6", green: "#10B981", amber: "#F59E0B",
-  red: "#EF4444", purple: "#8B5CF6",
-  textPrimary: "#E6EDF3", textSecondary: "#7D8590", textMuted: "#484F58",
+const C = {
+  bg:"#0D1117",surface:"#161B22",border:"#21262D",
+  blue:"#3B82F6",green:"#10B981",amber:"#F59E0B",
+  red:"#EF4444",purple:"#8B5CF6",
+  tp:"#E6EDF3",ts:"#7D8590",tm:"#484F58",
 };
-
-const avatarColors = { CR: "#3B82F6", SA: "#10B981", JT: "#8B5CF6", MK: "#F59E0B" };
+const AC = { CR:"#3B82F6", SA:"#10B981", JT:"#8B5CF6", MK:"#F59E0B" };
 
 const columns = [
-  { id: "todo",    label: "To Do",       color: COLORS.textSecondary, count: 8  },
-  { id: "inprog",  label: "In Progress", color: COLORS.amber,         count: 5  },
-  { id: "review",  label: "In Review",   color: COLORS.blue,          count: 3  },
-  { id: "done",    label: "Done",        color: COLORS.green,         count: 21 },
-  { id: "blocked", label: "Blocked",     color: COLORS.red,           count: 2  },
+  { id:"todo",    label:"To Do",       color:C.ts,    count:8  },
+  { id:"inprog",  label:"In Progress", color:C.amber, count:5  },
+  { id:"review",  label:"In Review",   color:C.blue,  count:3  },
+  { id:"done",    label:"Done",        color:C.green, count:21 },
+  { id:"blocked", label:"Blocked",     color:C.red,   count:2  },
 ];
 
 const issues = [
-  { id: "PHX-441", title: "MuleSoft PII masking in audit logs",           type: "story", priority: "high",     assignee: "CR", status: "inprog",  points: 5  },
-  { id: "PHX-438", title: "Copado pipeline health check automation",       type: "task",  priority: "medium",   assignee: "SA", status: "review",  points: 3  },
-  { id: "PHX-435", title: "Salesforce FSC ClaimCoverage object mapping",  type: "story", priority: "high",     assignee: "JT", status: "done",    points: 8  },
-  { id: "PHX-432", title: "AWS IaC baseline for Phoenix infra",           type: "epic",  priority: "critical", assignee: "CR", status: "inprog",  points: 13 },
-  { id: "PHX-429", title: "Oracle APEX PL/SQL defect triage workflow",    type: "bug",   priority: "high",     assignee: "MK", status: "blocked", points: 5  },
-  { id: "PHX-427", title: "Elastic observability dashboard config",       type: "task",  priority: "medium",   assignee: "SA", status: "inprog",  points: 5  },
-  { id: "PHX-424", title: "GitHub Actions workflow for Copado CI",        type: "story", priority: "medium",   assignee: "JT", status: "done",    points: 8  },
-  { id: "PHX-420", title: "ServiceNow → Jira sync validation",            type: "task",  priority: "low",      assignee: "CR", status: "todo",    points: 3  },
+  { id:"PHX-441", title:"MuleSoft PII masking in audit logs",          type:"story", priority:"high",     assignee:"CR", status:"inprog",  points:5  },
+  { id:"PHX-438", title:"Copado pipeline health check automation",      type:"task",  priority:"medium",   assignee:"SA", status:"review",  points:3  },
+  { id:"PHX-435", title:"Salesforce FSC ClaimCoverage object mapping", type:"story", priority:"high",     assignee:"JT", status:"done",    points:8  },
+  { id:"PHX-432", title:"AWS IaC baseline for Phoenix infra",          type:"epic",  priority:"critical", assignee:"CR", status:"inprog",  points:13 },
+  { id:"PHX-429", title:"Oracle APEX PL/SQL defect triage workflow",   type:"bug",   priority:"high",     assignee:"MK", status:"blocked", points:5  },
+  { id:"PHX-427", title:"Elastic observability dashboard config",      type:"task",  priority:"medium",   assignee:"SA", status:"inprog",  points:5  },
+  { id:"PHX-424", title:"GitHub Actions workflow for Copado CI",       type:"story", priority:"medium",   assignee:"JT", status:"done",    points:8  },
+  { id:"PHX-420", title:"ServiceNow → Jira sync validation",           type:"task",  priority:"low",      assignee:"CR", status:"todo",    points:3  },
 ];
 
 const burndown = [
-  { day: "Jun 9",  remaining: 80, ideal: 80 },
-  { day: "Jun 10", remaining: 74, ideal: 72 },
-  { day: "Jun 11", remaining: 68, ideal: 64 },
-  { day: "Jun 12", remaining: 65, ideal: 56 },
-  { day: "Jun 13", remaining: 58, ideal: 48 },
-  { day: "Jun 16", remaining: 47, ideal: 32 },
-  { day: "Jun 17", remaining: 38, ideal: 24 },
-  { day: "Jun 18", remaining: 28, ideal: 16 },
-  { day: "Jun 19", remaining: 22, ideal: 8  },
+  {remaining:80,ideal:80},{remaining:74,ideal:72},{remaining:68,ideal:64},
+  {remaining:65,ideal:56},{remaining:58,ideal:48},{remaining:47,ideal:32},
+  {remaining:38,ideal:24},{remaining:28,ideal:16},{remaining:22,ideal:8},
 ];
 
 const typeConfig = {
-  story: { label: "S",  bg: "#1D4ED8" },
-  task:  { label: "✓", bg: "#374151" },
-  bug:   { label: "⬥", bg: "#991B1B" },
-  epic:  { label: "⚡", bg: "#5B21B6" },
+  story:{label:"S", bg:"#1D4ED8"}, task:{label:"✓",bg:"#374151"},
+  bug:  {label:"⬥",bg:"#991B1B"}, epic:{label:"⚡",bg:"#5B21B6"},
 };
-
 const statusConfig = {
-  todo:    { label: "To Do",       color: COLORS.textSecondary, bg: "#21262D" },
-  inprog:  { label: "In Progress", color: COLORS.amber,         bg: "#2D1F06" },
-  review:  { label: "In Review",   color: COLORS.blue,          bg: "#0D1F3C" },
-  done:    { label: "Done",        color: COLORS.green,         bg: "#052E16" },
-  blocked: { label: "Blocked",     color: COLORS.red,           bg: "#2D0A0A" },
+  todo:   {label:"To Do",       color:C.ts,    bg:"#21262D"},
+  inprog: {label:"In Progress", color:C.amber, bg:"#2D1F06"},
+  review: {label:"In Review",   color:C.blue,  bg:"#0D1F3C"},
+  done:   {label:"Done",        color:C.green, bg:"#052E16"},
+  blocked:{label:"Blocked",     color:C.red,   bg:"#2D0A0A"},
 };
+const priorityColors = { critical:C.red, high:C.amber, medium:C.blue, low:C.ts };
 
-const priorityColors = {
-  critical: COLORS.red, high: COLORS.amber,
-  medium: COLORS.blue,  low: COLORS.textSecondary,
-};
-
-// ── Members ──────────────────────────────────────────────────────────────────
-const memberStrip = document.getElementById("memberStrip");
-Object.entries(avatarColors).forEach(([initials, color]) => {
-  const av = document.createElement("div");
-  av.className = "avatar";
-  av.style.background = color;
-  av.textContent = initials;
-  memberStrip.appendChild(av);
+// Members
+const ms = document.getElementById("memberStrip");
+Object.entries(AC).forEach(([k,v])=>{
+  const a=document.createElement("div"); a.className="avatar";
+  a.style.background=v; a.textContent=k; ms.appendChild(a);
 });
-const label = document.createElement("span");
-label.textContent = "4 members";
-memberStrip.appendChild(label);
+const lbl=document.createElement("span"); lbl.className="label";
+lbl.textContent="4 members"; ms.appendChild(lbl);
 
-// ── Stats row ─────────────────────────────────────────────────────────────────
-const statsRow = document.getElementById("statsRow");
-columns.forEach(col => {
-  const card = document.createElement("div");
-  card.className = "stat-card";
-  card.style.borderTopColor = col.color;
-  card.innerHTML = `
-    <div class="stat-num" style="color:${col.color}">${col.count}</div>
-    <div class="stat-label">${col.label}</div>
-  `;
-  statsRow.appendChild(card);
+// Stats
+const sr=document.getElementById("statsRow");
+columns.forEach(col=>{
+  const c=document.createElement("div"); c.className="stat-card";
+  c.style.borderTopColor=col.color;
+  c.innerHTML=`<div class="stat-num" style="color:${col.color}">${col.count}</div><div class="stat-label">${col.label}</div>`;
+  sr.appendChild(c);
 });
 
-// ── Resolved badge ────────────────────────────────────────────────────────────
-const totalDone = columns.find(c => c.id === "done").count;
-const totalIssues = columns.reduce((s, c) => s + c.count, 0);
-document.getElementById("resolvedBadge").textContent = `${totalDone}/${totalIssues} resolved`;
+// Resolved
+const done=columns.find(c=>c.id==="done").count;
+const total=columns.reduce((s,c)=>s+c.count,0);
+document.getElementById("resolvedBadge").textContent=`${done}/${total} resolved`;
 
-// ── Filter bar ────────────────────────────────────────────────────────────────
-let activeFilter = "all";
-const filterBar = document.getElementById("filterBar");
-const filterDefs = [
-  { id: "all",     label: "All issues"   },
-  { id: "inprog",  label: "In Progress"  },
-  { id: "review",  label: "In Review"    },
-  { id: "blocked", label: "Blocked"      },
-  { id: "done",    label: "Done"         },
-];
+// Filter + table
+let af="all";
+const fb=document.getElementById("filterBar");
+[{id:"all",label:"All issues"},{id:"inprog",label:"In Progress"},
+ {id:"review",label:"In Review"},{id:"blocked",label:"Blocked"},{id:"done",label:"Done"}
+].forEach(f=>{
+  const b=document.createElement("button"); b.className="filter-btn"+(f.id==="all"?" active":"");
+  b.textContent=f.label; b.dataset.id=f.id;
+  b.addEventListener("click",()=>{
+    af=f.id;
+    document.querySelectorAll(".filter-btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active"); renderTable(); postHeight();
+  });
+  fb.appendChild(b);
+});
 
-function renderTable() {
-  const filtered = activeFilter === "all" ? issues : issues.filter(i => i.status === activeFilter);
-  const table = document.getElementById("issueTable");
-  table.innerHTML = "";
-  filtered.forEach((issue, i) => {
-    const tc = typeConfig[issue.type] || typeConfig.task;
-    const sc = statusConfig[issue.status] || { label: issue.status, color: "#888", bg: "#222" };
-    const row = document.createElement("div");
-    row.className = `table-row ${i % 2 === 0 ? "even" : "odd"}`;
-    row.innerHTML = `
+function renderTable(){
+  const rows=af==="all"?issues:issues.filter(i=>i.status===af);
+  const t=document.getElementById("issueTable"); t.innerHTML="";
+  rows.forEach((issue,i)=>{
+    const tc=typeConfig[issue.type]||typeConfig.task;
+    const sc=statusConfig[issue.status]||{label:issue.status,color:"#888",bg:"#222"};
+    const row=document.createElement("div");
+    row.className="table-row"+(i%2?" odd":"");
+    row.innerHTML=`
       <div class="type-icon" style="background:${tc.bg}">${tc.label}</div>
       <span class="issue-key">${issue.id}</span>
       <span class="issue-title">${issue.title}</span>
       <span class="pill" style="color:${sc.color};background:${sc.bg}">${sc.label}</span>
       <span class="issue-pts">${issue.points}</span>
       <div class="assignee-cell">
-        <div class="avatar" style="background:${avatarColors[issue.assignee]}">${issue.assignee}</div>
+        <div class="avatar" style="background:${AC[issue.assignee]}">${issue.assignee}</div>
         <span>${issue.assignee}</span>
       </div>
-      <div class="priority-dot" style="background:${priorityColors[issue.priority]}"></div>
-    `;
-    table.appendChild(row);
+      <div class="priority-dot" style="background:${priorityColors[issue.priority]}"></div>`;
+    t.appendChild(row);
   });
 }
-
-filterDefs.forEach(f => {
-  const btn = document.createElement("button");
-  btn.className = "filter-btn" + (f.id === "all" ? " active" : "");
-  btn.textContent = f.label;
-  btn.dataset.id = f.id;
-  btn.addEventListener("click", () => {
-    activeFilter = f.id;
-    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    renderTable();
-  });
-  filterBar.appendChild(btn);
-});
 renderTable();
 
-// ── Velocity ring ─────────────────────────────────────────────────────────────
-(function animateRing() {
-  const svg = document.getElementById("velocityRing");
-  const size = 120, cx = 60, r = (size - 16) / 2;
-  const circ = 2 * Math.PI * r;
-  const target = 72 / 80;
-
-  const track = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  track.setAttribute("cx", cx); track.setAttribute("cy", cx); track.setAttribute("r", r);
-  track.setAttribute("fill", "none");
-  track.setAttribute("stroke", COLORS.border);
-  track.setAttribute("stroke-width", "8");
-  svg.appendChild(track);
-
-  const arc = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  arc.setAttribute("cx", cx); arc.setAttribute("cy", cx); arc.setAttribute("r", r);
-  arc.setAttribute("fill", "none");
-  arc.setAttribute("stroke", COLORS.blue);
-  arc.setAttribute("stroke-width", "8");
-  arc.setAttribute("stroke-linecap", "round");
-  arc.setAttribute("stroke-dasharray", `0 ${circ}`);
+// Velocity ring
+(function(){
+  const svg=document.getElementById("velocityRing");
+  const size=110, cx=55, r=(size-14)/2, circ=2*Math.PI*r, target=72/80;
+  const ns="http://www.w3.org/2000/svg";
+  const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
+  svg.appendChild(mk("circle",{cx,cy:cx,r,fill:"none",stroke:C.border,"stroke-width":7}));
+  const arc=mk("circle",{cx,cy:cx,r,fill:"none",stroke:C.blue,"stroke-width":7,"stroke-linecap":"round","stroke-dasharray":`0 ${circ}`});
   svg.appendChild(arc);
-
-  const duration = 1200;
-  let start = null;
-  function step(ts) {
-    if (!start) start = ts;
-    const p = Math.min((ts - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - p, 3);
-    const dash = ease * target * circ;
-    arc.setAttribute("stroke-dasharray", `${dash} ${circ}`);
-    if (p < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
+  let start=null;
+  (function step(ts){
+    if(!start)start=ts;
+    const p=Math.min((ts-start)/1200,1), ease=1-Math.pow(1-p,3);
+    arc.setAttribute("stroke-dasharray",`${ease*target*circ} ${circ}`);
+    if(p<1)requestAnimationFrame(step);
+  })(performance.now());
 })();
 
-// ── Burndown chart ────────────────────────────────────────────────────────────
-(function drawBurndown() {
-  const svg = document.getElementById("burndownChart");
-  const W = 268, H = 60;
-  const max = 80;
-  const n = burndown.length;
-
-  const toPath = arr => arr.map((d, i) => {
-    const x = (i / (n - 1)) * W;
-    const y = H - (d / max) * H;
-    return `${i === 0 ? "M" : "L"}${x},${y}`;
-  }).join(" ");
-
-  const idealPts = burndown.map(d => d.ideal);
-  const actualPts = burndown.map(d => d.remaining);
-
-  const idealPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  idealPath.setAttribute("d", toPath(idealPts));
-  idealPath.setAttribute("fill", "none");
-  idealPath.setAttribute("stroke", COLORS.textMuted);
-  idealPath.setAttribute("stroke-width", "1.5");
-  idealPath.setAttribute("stroke-dasharray", "4 3");
-  svg.appendChild(idealPath);
-
-  const actualPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  actualPath.setAttribute("d", toPath(actualPts));
-  actualPath.setAttribute("fill", "none");
-  actualPath.setAttribute("stroke", COLORS.blue);
-  actualPath.setAttribute("stroke-width", "2");
-  svg.appendChild(actualPath);
-
-  // End dot
-  const lastX = W;
-  const lastY = H - (actualPts[actualPts.length - 1] / max) * H;
-  const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  dot.setAttribute("cx", lastX); dot.setAttribute("cy", lastY);
-  dot.setAttribute("r", "4"); dot.setAttribute("fill", COLORS.blue);
-  svg.appendChild(dot);
+// Burndown
+(function(){
+  const svg=document.getElementById("burndownChart");
+  const W=260,H=56,max=80,n=burndown.length;
+  const ns="http://www.w3.org/2000/svg";
+  const pt=(arr,key)=>arr.map((d,i)=>`${i===0?"M":"L"}${(i/(n-1))*W},${H-(d[key]/max)*H}`).join(" ");
+  const mk=(tag,attrs)=>{ const e=document.createElementNS(ns,tag); Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
+  svg.appendChild(mk("path",{d:pt(burndown,"ideal"),fill:"none",stroke:C.tm,"stroke-width":"1.5","stroke-dasharray":"4 3"}));
+  svg.appendChild(mk("path",{d:pt(burndown,"remaining"),fill:"none",stroke:C.blue,"stroke-width":"2"}));
+  const lx=W, ly=H-(burndown[n-1].remaining/max)*H;
+  svg.appendChild(mk("circle",{cx:lx,cy:ly,r:"4",fill:C.blue}));
 })();
 
-// ── Workload bars ─────────────────────────────────────────────────────────────
-(function renderWorkload() {
-  const body = document.getElementById("workloadBody");
-  const maxPts = 21;
-  Object.entries(avatarColors).forEach(([initials, color]) => {
-    const assigned = issues.filter(i => i.assignee === initials);
-    const pts = assigned.reduce((s, i) => s + i.points, 0);
-    const pct = (pts / maxPts) * 100;
-    const row = document.createElement("div");
-    row.className = "workload-row";
-    row.innerHTML = `
-      <div class="avatar" style="background:${color}">${initials}</div>
+// Workload
+(function(){
+  const body=document.getElementById("workloadBody"), maxPts=21;
+  Object.entries(AC).forEach(([k,v])=>{
+    const pts=issues.filter(i=>i.assignee===k).reduce((s,i)=>s+i.points,0);
+    const row=document.createElement("div"); row.className="workload-row";
+    row.innerHTML=`
+      <div class="avatar" style="background:${v}">${k}</div>
       <div class="workload-meta">
-        <div class="workload-top">
-          <span class="name">${initials}</span>
-          <span class="pts">${pts} pts</span>
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:0%;background:${color};transition:width 0.8s cubic-bezier(0.4,0,0.2,1)" data-w="${pct}"></div>
-        </div>
-      </div>
-    `;
+        <div class="workload-top"><span class="name">${k}</span><span class="pts">${pts} pts</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%;background:${v};transition:width 0.8s cubic-bezier(0.4,0,0.2,1)" data-w="${(pts/maxPts)*100}"></div></div>
+      </div>`;
     body.appendChild(row);
   });
-  // Animate bars after paint
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    document.querySelectorAll(".bar-fill").forEach(el => {
-      el.style.width = el.dataset.w + "%";
-    });
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll(".bar-fill").forEach(el=>el.style.width=el.dataset.w+"%");
+    postHeight();
   }));
 })();
+
+// Post height to parent for iframe auto-resize
+function postHeight(){
+  const h=document.body.scrollHeight;
+  try{ window.parent.postMessage({type:"dashboard-height",height:h},"*"); }catch(e){}
+}
+window.addEventListener("load", postHeight);
+window.addEventListener("resize", postHeight);
 </script>
 </body>
 </html>
