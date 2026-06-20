@@ -21,6 +21,42 @@ jobs:
       contents: write
 
     steps:
+      - name: Validate secrets shape
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import os, base64
+
+          email = os.environ.get('JIRA_EMAIL', '')
+          token = os.environ.get('JIRA_TOKEN', '')
+
+          # Print email in full (not sensitive)
+          print(f'JIRA_EMAIL : "{email}"')
+          print(f'  length   : {len(email)}')
+          print(f'  stripped : "{email.strip()}" (differs={email != email.strip()})')
+
+          # Print token shape only — enough to spot truncation or wrong value
+          tlen = len(token)
+          tmask = token[:6] + '…' + token[-6:] if tlen > 12 else '(too short)'
+          print(f'JIRA_TOKEN : {tmask}')
+          print(f'  length   : {tlen}  (expected ~200 chars for an Atlassian API token)')
+          print(f'  stripped : differs={token != token.strip()}')
+
+          if not email or not token:
+              raise RuntimeError('One or both secrets are empty — add them in Settings → Secrets and variables → Actions')
+          if email != email.strip() or token != token.strip():
+              raise RuntimeError('Secret has leading/trailing whitespace — re-enter it without spaces')
+          if tlen < 50:
+              raise RuntimeError(f'Token looks too short ({tlen} chars) — it may have been truncated when pasted')
+
+          # Print the Base64 header so you can test it directly in Postman
+          b64 = base64.b64encode(f'{email}:{token}'.encode()).decode()
+          print(f'\nBase64 header (first 30 chars): {b64[:30]}…')
+          print('Paste into Postman → Authorization → Basic Auth and confirm it matches.')
+          PY
+
       - name: Fetch sprint + issues from Jira
         env:
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
@@ -30,14 +66,11 @@ jobs:
           import json, re, urllib.request, urllib.error, base64, os, time
           from datetime import datetime, timezone
 
-          email  = os.environ.get('JIRA_EMAIL', '')
-          token  = os.environ.get('JIRA_TOKEN', '')
+          email  = os.environ.get('JIRA_EMAIL', '').strip()
+          token  = os.environ.get('JIRA_TOKEN', '').strip()
           domain = 'nhbc.atlassian.net'
           board  = '2766'
           fields = 'summary,status,issuetype,priority,assignee,customfield_10016'
-
-          if not email or not token:
-              raise RuntimeError('JIRA_EMAIL or JIRA_TOKEN secret is missing — check Settings → Secrets and variables → Actions')
 
           b64 = base64.b64encode(f'{email}:{token}'.encode()).decode()
           hdr = {'Authorization': 'Basic ' + b64, 'Accept': 'application/json'}
@@ -53,7 +86,10 @@ jobs:
                       print(f'  HTTP {e.code} on attempt {attempt+1}/{retries}: {url}')
                       print(f'  Response body: {body}')
                       if e.code == 401:
-                          raise RuntimeError('401 Unauthorised — JIRA_TOKEN is invalid or expired') from e
+                          raise RuntimeError(
+                              '401 Unauthorised — token rejected by Jira. '
+                              'Check the JIRA_TOKEN secret matches the token shown in Postman.'
+                          ) from e
                       if e.code == 403:
                           raise RuntimeError('403 Forbidden — token lacks permission to access this board') from e
                       if e.code == 404:
@@ -152,7 +188,6 @@ jobs:
           with open('/tmp/data.json', 'rb') as f:
               encoded = base64.b64encode(f.read()).decode()
 
-          # Get existing file SHA (required to update an existing file)
           sha = None
           try:
               req = urllib.request.Request(url, headers=hdrs)
