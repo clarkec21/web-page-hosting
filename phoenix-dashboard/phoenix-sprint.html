@@ -203,6 +203,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size
 .err{margin:16px;padding:14px 16px;background:var(--red2);border:1px solid rgba(239,68,68,.2);
   border-radius:10px;color:var(--red);font-size:12px;line-height:1.6}
 .err strong{display:block;font-size:13px;margin-bottom:5px}
+.err em{color:var(--amber);font-style:normal;font-weight:600}
 .err code{background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;
   font-family:var(--mono);font-size:11px}
 .loader{display:flex;align-items:center;justify-content:center;gap:10px;
@@ -219,7 +220,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size
   <div>
     <div class="eyebrow"><span class="live-dot"></span>Phoenix Project · Active Sprint</div>
     <div class="sprint-title" id="spTitle">Loading sprint…</div>
-    <div class="sprint-meta" id="spMeta">Connecting to Jira…</div>
+    <div class="sprint-meta" id="spMeta">Loading…</div>
   </div>
   <div class="hdr-right">
     <div class="hdr-row">
@@ -272,7 +273,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size
       <span></span>
     </div>
     <div class="tbl-body" id="tblBody">
-      <div class="loader"><div class="spinner spin"></div>Connecting to Jira…</div>
+      <div class="loader"><div class="spinner spin"></div>Loading…</div>
     </div>
   </div>
 
@@ -328,7 +329,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size
       </div>
     </div>
 
-    <!-- Velocity history (populated async) -->
+    <!-- Velocity history -->
     <div class="card" id="vhCard" style="display:none">
       <div class="card-head">
         <span class="card-title">Recent velocity</span>
@@ -341,23 +342,6 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size
 </div>
 </div>
 <script>
-/* ══════════════════════════════════════════════════════════════
-   CONFIG
-   ⚠ WARNING: credentials visible in page source on GitHub Pages.
-   Rotate token if this repo is public, or use a backend proxy.
-══════════════════════════════════════════════════════════════ */
-const CFG = {
-  domain:   'nhbc.atlassian.net',
-  email:    'cjclarke@nhbc.co.uk',
-  token:    'ATATT3xFfGF0mTMgj9ZdzdCfPIb4ZxI_LE8xtoN8LXtit6YlAfYGQsdgT2uAhilfYA4e_tNH9yx2FVgDFIag2Bv-UhZxDvElLFVa8TFzkTB56ivNDoBZCUL1Z5saqzbB5U09MYc89Ymsr2LGMFBv25Ik-hZmvNJGSkYeaNzKWxZ2u-xk_blzflw=14C693DA',
-  boardId:  '2766',
-  autoMins: 5,
-};
-/* ══════════════════════════════════════════════════════════════ */
-
-const BASE = 'https://' + CFG.domain;
-const AUTH = 'Basic ' + btoa(CFG.email + ':' + CFG.token);
-
 /* ── Colour helpers ─────────────────────────────────────────── */
 const STATUS_MAP = [
   { re:/done|complet|close|resolv/i,  color:'#10B981', bg:'#052E16' },
@@ -400,95 +384,34 @@ let allIssues=[], sprint=null;
 let sortKey='key', sortDir=1;
 let filterSt='all', filterAv=null, searchQ='', selKpi=null;
 
-/* ── API ────────────────────────────────────────────────────── */
-async function jira(path){
-  const r = await fetch(BASE+path,{headers:{Authorization:AUTH,Accept:'application/json'}});
-  if(!r.ok){ const t=await r.text(); throw new Error(`Jira ${r.status}: ${t.slice(0,300)}`); }
-  return r.json();
-}
-
-/* ── Main load ──────────────────────────────────────────────── */
+/* ── Main load — reads data.json committed by the bookmarklet ── */
 async function loadAll(){
   setBusy(true);
   try{
-    // Try static data.json first (GitHub Actions pipeline, avoids CORS + proxy issues)
-    let useStatic = false;
-    try{
-      const sr = await fetch('./data.json?_='+Date.now(),{cache:'no-store'});
-      if(sr.ok){
-        const d = await sr.json();
-        if(d.sprint && Array.isArray(d.issues)){
-          sprint    = d.sprint;
-          allIssues = d.issues;
-          useStatic = true;
-          const age = d.fetchedAt
-            ? Math.round((Date.now()-new Date(d.fetchedAt))/60000)+'m ago'
-            : '';
-          document.getElementById('lastUpd').textContent =
-            'Data fetched '+age+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-          if(d.history) renderHistory(d.history);
-        }
-      }
-    } catch(_){}
-
-    if(!useStatic){
-      // Direct Jira API (works from localhost; may be blocked by corporate proxy on GH Pages)
-      const sd = await jira(`/rest/agile/1.0/board/${CFG.boardId}/sprint?state=active`);
-      if(!sd.values?.length) throw new Error('No active sprint found for board '+CFG.boardId+'. Check your Board ID.');
-      sprint = sd.values[0];
-
-      const fields='summary,status,issuetype,priority,assignee,customfield_10016,story_points';
-      let issues=[],start=0,total=Infinity;
-      while(start<total){
-        const c = await jira(`/rest/agile/1.0/sprint/${sprint.id}/issue?startAt=${start}&maxResults=100&fields=${fields}`);
-        issues = issues.concat(c.issues);
-        total  = c.total;
-        start += c.issues.length;
-        if(!c.issues.length) break;
-      }
-      allIssues = issues;
-
-      document.getElementById('lastUpd').textContent =
-        'Live · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-
-      fetchHistory();
-    }
-
-    renderHeader();
-    renderKpi();
-    renderPills();
-    renderTable();
-    renderVelocity();
-    renderBurndown();
-    renderWorkload();
-    sync();
+    const sr = await fetch('./data.json?_='+Date.now(),{cache:'no-store'});
+    if(!sr.ok) throw new Error(
+      'No data yet. Click the <em>Update Dashboard</em> bookmark while logged into ' +
+      '<code>nhbc.atlassian.net</code>.'
+    );
+    const d = await sr.json();
+    if(!d.sprint || !Array.isArray(d.issues)) throw new Error(
+      'data.json is malformed — re-run the Update Dashboard bookmark.'
+    );
+    sprint    = d.sprint;
+    allIssues = d.issues;
+    const age = d.fetchedAt
+      ? Math.round((Date.now()-new Date(d.fetchedAt))/60000)+'m ago'
+      : '';
+    document.getElementById('lastUpd').textContent =
+      'Updated '+age+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    if(d.history) renderHistory(d.history);
+    renderHeader(); renderKpi(); renderPills(); renderTable();
+    renderVelocity(); renderBurndown(); renderWorkload(); sync();
   } catch(e){
     showErr(e.message);
   } finally{
     setBusy(false);
   }
-}
-
-/* ── Velocity history (background) ─────────────────────────── */
-async function fetchHistory(){
-  try{
-    const r = await jira(`/rest/agile/1.0/board/${CFG.boardId}/sprint?state=closed&maxResults=5`);
-    const recent = (r.values||[]).slice(-4).reverse();
-    if(!recent.length) return;
-    const rows = await Promise.all(recent.map(async s=>{
-      const d = await jira(`/rest/agile/1.0/sprint/${s.id}/issue?fields=status,customfield_10016&maxResults=250`);
-      const p = d.issues.reduce((a,i)=>{
-        if(/done|complet|close|resolv/i.test(i.fields.status.name))
-          a += parseFloat(i.fields.customfield_10016||0);
-        return a;
-      },0);
-      const label = s.name.replace(/^.*?sprint\s*/i,'Spr ').slice(0,10);
-      return {name:label, pts:Math.round(p), cur:false};
-    }));
-    const curDone = allIssues.filter(i=>/done|complet|close|resolv/i.test(i.fields.status.name))
-                              .reduce((a,i)=>a+pts(i),0);
-    renderHistory([{name:'Current',pts:Math.round(curDone),cur:true},...rows]);
-  } catch(e){/* silent */}
 }
 
 /* ── Helpers ────────────────────────────────────────────────── */
@@ -513,7 +436,6 @@ function renderHeader(){
   document.getElementById('spMeta').innerHTML =
     `${fmt(sprint.startDate)} – ${fmt(sprint.endDate)} · ${allIssues.length} issues ${daysTag} ${blkTag}`;
 
-  // Avatars
   const seen=new Set(), strip=document.getElementById('avStrip');
   strip.innerHTML='';
   allIssues.forEach(i=>{
@@ -521,7 +443,6 @@ function renderHeader(){
     if(a&&!seen.has(a.accountId)){ seen.add(a.accountId); strip.insertAdjacentHTML('beforeend',avHtml(a,26)); }
   });
 
-  // Health badge
   const h=calcHealth();
   const [hc,hbg,hl] = h>=80
     ? ['var(--green)','rgba(16,185,129,.1)','On Track']
@@ -630,8 +551,7 @@ function filtered(){
 function setSort(k){
   if(sortKey===k) sortDir*=-1; else{sortKey=k;sortDir=1;}
   document.querySelectorAll('.th>span').forEach(s=>s.classList.remove('asc','desc'));
-  const map={key:'key',summary:'summary',status:'status',pts:'pts',assignee:'assignee'};
-  const el=document.getElementById('sh-'+map[k]);
+  const el=document.getElementById('sh-'+k);
   if(el) el.classList.add(sortDir===1?'asc':'desc');
   renderTable();
 }
@@ -656,7 +576,7 @@ function renderTable(){
     const prio=f.priority?.name||'Medium';
     const row=document.createElement('a');
     row.className='tr cols'+(idx%2?' stripe':'');
-    row.href=`${BASE}/browse/${issue.key}`;
+    row.href='https://nhbc.atlassian.net/browse/'+issue.key;
     row.target='_blank'; row.rel='noopener';
     row.innerHTML=`
       <div class="type-ic" style="background:${typ.bg}" title="${f.issuetype?.name||''}">${typ.l}</div>
@@ -679,7 +599,7 @@ function renderVelocity(){
   const pct  =total>0?done/total:0;
   document.getElementById('velBadge').textContent=sprint?.name||'Sprint';
   document.getElementById('velDone').textContent =Math.round(done);
-  document.getElementById('velOf').textContent   =`/ ${Math.round(total)} pts`;
+  document.getElementById('velOf').textContent   ='/ '+Math.round(total)+' pts';
   document.getElementById('velComp').textContent =Math.round(done)+' pts';
   document.getElementById('velRem').textContent  =Math.round(rem)+' pts';
   document.getElementById('velPct').textContent  =Math.round(pct*100)+'%';
@@ -690,13 +610,13 @@ function renderVelocity(){
   const mk=(t,a)=>{ const e=document.createElementNS(ns,t); Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
   const arcC=pct>=.9?'#10B981':pct>=.5?'#3B82F6':'#F59E0B';
   svg.appendChild(mk('circle',{cx,cy:cx,r,fill:'none',stroke:'#1B2A40','stroke-width':'7'}));
-  const arc=mk('circle',{cx,cy:cx,r,fill:'none',stroke:arcC,'stroke-width':'7','stroke-linecap':'round','stroke-dasharray':`0 ${circ}`});
+  const arc=mk('circle',{cx,cy:cx,r,fill:'none',stroke:arcC,'stroke-width':'7','stroke-linecap':'round','stroke-dasharray':'0 '+circ});
   svg.appendChild(arc);
   let st=null;
   (function step(ts){
     if(!st)st=ts;
     const p=Math.min((ts-st)/900,1),e=1-Math.pow(1-p,3);
-    arc.setAttribute('stroke-dasharray',`${e*pct*circ} ${circ}`);
+    arc.setAttribute('stroke-dasharray',e*pct*circ+' '+circ);
     if(p<1)requestAnimationFrame(step);
   })(performance.now());
   document.getElementById('velDone').style.color=arcC;
@@ -718,15 +638,12 @@ function renderBurndown(){
   svg.innerHTML='';
   const mk=(t,a)=>{ const e=document.createElementNS(ns,t); Object.entries(a).forEach(([k,v])=>e.setAttribute(k,v)); return e; };
   const xS=v=>(v/totalDays)*W, yS=v=>H-(v/max)*H;
-  // grid
   [0,.25,.5,.75,1].forEach(f=>svg.appendChild(mk('line',{x1:0,y1:f*H,x2:W,y2:f*H,stroke:'#1B2A40','stroke-width':'1'})));
-  // ideal
-  svg.appendChild(mk('path',{d:`M0,0 L${W},${H}`,fill:'none',stroke:'#3E5068','stroke-width':'1.5','stroke-dasharray':'4 3'}));
-  // actual
+  svg.appendChild(mk('path',{d:'M0,0 L'+W+','+H,fill:'none',stroke:'#3E5068','stroke-width':'1.5','stroke-dasharray':'4 3'}));
   const ax=xS(elapsed),ay=yS(rem);
-  svg.appendChild(mk('path',{d:`M0,0 L${ax},${ay}`,fill:'none',stroke:'#3B82F6','stroke-width':'2.5'}));
+  svg.appendChild(mk('path',{d:'M0,0 L'+ax+','+ay,fill:'none',stroke:'#3B82F6','stroke-width':'2.5'}));
   if(elapsed<totalDays){
-    svg.appendChild(mk('path',{d:`M${ax},${ay} L${W},${H}`,fill:'none',stroke:'#3B82F6','stroke-width':'1.5','stroke-dasharray':'3 2',opacity:'.4'}));
+    svg.appendChild(mk('path',{d:'M'+ax+','+ay+' L'+W+','+H,fill:'none',stroke:'#3B82F6','stroke-width':'1.5','stroke-dasharray':'3 2',opacity:'.4'}));
   }
   const idealNow=max*(1-elapsed/totalDays);
   const dotC=rem<=idealNow?'#10B981':'#EF4444';
@@ -751,14 +668,14 @@ function renderWorkload(){
     const pct=(p.pts/maxP)*100;
     const row=document.createElement('div');
     row.className='wl-row'+(filterAv===p.name?' sel-av':'');
-    row.innerHTML=`${avHtml(p.assignee,24)}
-      <div class="wl-meta">
-        <div class="wl-top">
-          <span class="wl-nm">${p.name.split(' ')[0]}</span>
-          <span class="wl-pts">${Math.round(p.pts)} pts · ${p.count} issue${p.count!==1?'s':''}</span>
-        </div>
-        <div class="bar-t"><div class="bar-f" style="background:${p.color}" data-w="${pct}"></div></div>
-      </div>`;
+    row.innerHTML=avHtml(p.assignee,24)+
+      '<div class="wl-meta">'+
+        '<div class="wl-top">'+
+          '<span class="wl-nm">'+p.name.split(' ')[0]+'</span>'+
+          '<span class="wl-pts">'+Math.round(p.pts)+' pts \xB7 '+p.count+' issue'+(p.count!==1?'s':'')+'</span>'+
+        '</div>'+
+        '<div class="bar-t"><div class="bar-f" style="background:'+p.color+'" data-w="'+pct+'"></div></div>'+
+      '</div>';
     row.addEventListener('click',()=>{
       filterAv = filterAv===p.name ? null : p.name;
       filterSt='all'; selKpi=null;
@@ -781,10 +698,10 @@ function renderHistory(data){
     const pct=(d.pts/maxV)*100;
     const el=document.createElement('div');
     el.className='vh-row';
-    el.innerHTML=`
-      <span class="vh-lbl" title="${d.name}">${d.name}</span>
-      <div class="vh-bw"><div class="vh-bf" style="background:${d.cur?'var(--blue)':'var(--purple)'}" data-w="${pct}"></div></div>
-      <span class="${d.cur?'vh-cur':'vh-val'}">${d.pts}</span>`;
+    el.innerHTML=
+      '<span class="vh-lbl" title="'+d.name+'">'+d.name+'</span>'+
+      '<div class="vh-bw"><div class="vh-bf" style="background:'+(d.cur?'var(--blue)':'var(--purple)')+'" data-w="'+pct+'"></div></div>'+
+      '<span class="'+(d.cur?'vh-cur':'vh-val')+'">'+d.pts+'</span>';
     body.appendChild(el);
   });
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -796,9 +713,8 @@ function renderHistory(data){
 /* ── Utils ──────────────────────────────────────────────────── */
 function showErr(msg){
   document.getElementById('tblBody').innerHTML=
-    `<div class="err"><strong>⚠ Could not load Jira data</strong>${msg}<br><br>
-    Check <code>domain</code>, <code>email</code>, <code>token</code>, <code>boardId</code> in the CFG block.
-    Some corporate proxies block cross-origin requests to Atlassian.</div>`;
+    '<div class="err"><strong>⚠ No sprint data</strong>'+msg+'<br><br>'+
+    'Use the <em>Update Dashboard</em> bookmark on <code>nhbc.atlassian.net</code> to populate this dashboard.</div>';
 }
 function setBusy(on){
   const btn=document.getElementById('refreshBtn');
@@ -809,8 +725,6 @@ function sync(){
   try{ window.parent.postMessage({type:'dashboard-height',height:document.body.scrollHeight},'*'); }catch(e){}
 }
 window.addEventListener('resize',sync);
-
-if(CFG.autoMins>0) setInterval(loadAll,CFG.autoMins*60*1000);
 loadAll();
 </script>
 </body>
