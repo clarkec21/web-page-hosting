@@ -42,7 +42,11 @@ main{padding:20px 24px;display:grid;gap:20px}
 /* ── Panels ── */
 .panels{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
-.panel-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:8px}
+.panel-sub{font-size:.68rem;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
+
+/* ── Line chart panels ── */
+.line-panels{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
 
 /* ── Priority bars ── */
 .prio-row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;border-radius:4px}
@@ -73,7 +77,7 @@ main{padding:20px 24px;display:grid;gap:20px}
 .own-bar{height:8px;border-radius:4px;background:var(--orange);transition:width .4s}
 .own-cnt{width:24px;text-align:right;font-size:.8rem;color:var(--text2)}
 
-/* ── Trend chart ── */
+/* ── Sprint trend bars ── */
 .trend-wrap{overflow-x:auto}
 .trend-chart{display:flex;align-items:flex-end;gap:12px;min-height:90px;padding:8px 0}
 .trend-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:48px}
@@ -91,7 +95,7 @@ main{padding:20px 24px;display:grid;gap:20px}
 .tbl-hdr{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)}
 .tbl-hdr-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
 #filterInfo{font-size:.75rem;color:var(--orange);margin-left:8px}
-#clearFilter{font-size:.72rem;color:var(--muted);cursor:pointer;margin-left:auto;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2)}
+#clearFilter{font-size:.72rem;cursor:pointer;margin-left:auto;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2)}
 #clearFilter:hover{border-color:var(--text2)}
 table{width:100%;border-collapse:collapse}
 th{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 12px;text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
@@ -155,6 +159,24 @@ tr:hover td{background:var(--surface2)}
     </div>
   </div>
 
+  <!-- Daily line charts -->
+  <div class="panels line-panels">
+    <div class="panel">
+      <div class="panel-title">
+        Daily Defects Raised
+        <span class="panel-sub">from 16 Jun 2026 · hover dots for count</span>
+      </div>
+      <div id="raisedChart"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">
+        Daily Defects Closed
+        <span class="panel-sub">from 16 Jun 2026 · amber line = today</span>
+      </div>
+      <div id="closedChart"></div>
+    </div>
+  </div>
+
   <!-- Defect table -->
   <div class="tbl-wrap">
     <div class="tbl-hdr">
@@ -192,6 +214,8 @@ const STATUS_COLORS = {
   todo:       {bg:'#1c1c2e',fg:'#818cf8'},
   default:    {bg:'#1e2028',fg:'#9ca3af'},
 };
+
+const CHART_START = '2026-06-16';
 
 let allDefects = [], trendData = [];
 let sortCol = 'priority', sortAsc = false;
@@ -293,6 +317,7 @@ function render(){
   renderAge();
   renderOwner();
   renderTrend();
+  renderDailyCharts();
   renderTable();
 }
 
@@ -400,6 +425,132 @@ function renderTrend(){
       <div class="trend-lbl">${t.name}</div>
     </div>`;
   }).join('');
+}
+
+/* ── Daily line charts ── */
+function buildDayRange(from){
+  const days = [];
+  const start = new Date(from + 'T00:00:00');
+  const today = new Date();
+  today.setHours(23,59,59,0);
+  const cur = new Date(start);
+  while(cur <= today){
+    days.push(cur.toISOString().split('T')[0]);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
+function renderDailyCharts(){
+  const days = buildDayRange(CHART_START);
+  const raised = {}, closed = {};
+  days.forEach(d => { raised[d] = 0; closed[d] = 0; });
+
+  allDefects.forEach(issue => {
+    const f = issue.fields;
+
+    const c = (f.created || '').split('T')[0];
+    if(c in raised) raised[c]++;
+
+    // Use resolutiondate if present; fall back to updated for done items
+    let r = (f.resolutiondate || '').split('T')[0];
+    if(!r && isDone(f.status.name)) r = (f.updated || '').split('T')[0];
+    if(r && r in closed) closed[r]++;
+  });
+
+  renderLineSvg('raisedChart', days, raised, '#EF4444');
+  renderLineSvg('closedChart', days, closed, '#22C55E');
+}
+
+function renderLineSvg(containerId, days, data, color){
+  if(!days.length){ document.getElementById(containerId).innerHTML=''; return; }
+
+  const W = 440, H = 145;
+  const PL = 30, PR = 10, PT = 10, PB = 28;
+  const IW = W - PL - PR;
+  const IH = H - PT - PB;
+  const bottom = PT + IH;
+
+  const values = days.map(d => data[d] || 0);
+  const maxVal = Math.max(1, ...values);
+  const n = days.length;
+
+  const px = i => PL + (n > 1 ? i / (n - 1) : 0.5) * IW;
+  const py = v => PT + (1 - v / maxVal) * IH;
+
+  // Area fill path
+  const areaD = [
+    `M${px(0)},${bottom}`,
+    `L${px(0)},${py(values[0])}`,
+    ...values.slice(1).map((v,i) => `L${px(i+1)},${py(v)}`),
+    `L${px(n-1)},${bottom}`,
+    'Z'
+  ].join(' ');
+
+  // Stroke path
+  const lineD = [
+    `M${px(0)},${py(values[0])}`,
+    ...values.slice(1).map((v,i) => `L${px(i+1)},${py(v)}`)
+  ].join(' ');
+
+  // X-axis labels: show every N days so they don't crowd
+  const step = n <= 7 ? 1 : n <= 14 ? 2 : Math.ceil(n / 7);
+  const xLabels = days.map((d, i) => {
+    if(i % step !== 0 && i !== n - 1) return '';
+    const dt = new Date(d + 'T12:00:00');
+    return `<text x="${px(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" fill="#6B7280" font-size="9">${dt.getDate()}/${dt.getMonth()+1}</text>`;
+  }).join('');
+
+  // Y-axis: 0, mid, max (deduplicated)
+  const mid = Math.ceil(maxVal / 2);
+  const yTicks = [...new Set([0, mid, maxVal])].map(v => {
+    const y = py(v).toFixed(1);
+    const dash = v === 0 ? '' : 'stroke-dasharray="4,4"';
+    return `<line x1="${PL}" y1="${y}" x2="${PL+IW}" y2="${y}" stroke="#2A2D38" stroke-width="1" ${dash}/>
+            <text x="${PL-4}" y="${(py(v)+3).toFixed(1)}" text-anchor="end" fill="#6B7280" font-size="9">${v}</text>`;
+  }).join('');
+
+  // Dots with SVG title tooltips (hover to see date + count)
+  const dots = values.map((v, i) => {
+    if(v === 0) return '';
+    const dt = new Date(days[i] + 'T12:00:00');
+    const lbl = `${dt.getDate()}/${dt.getMonth()+1}: ${v}`;
+    return `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.5" fill="${color}" stroke="#0D0D0F" stroke-width="1.5"><title>${lbl}</title></circle>`;
+  }).join('');
+
+  // Invisible wider hit targets for hover (better UX)
+  const hitTargets = values.map((v, i) =>
+    `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="8" fill="transparent"><title>${new Date(days[i]+'T12:00:00').getDate()}/${new Date(days[i]+'T12:00:00').getMonth()+1}: ${v}</title></circle>`
+  ).join('');
+
+  // Today marker
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayIdx = days.indexOf(todayStr);
+  const todayLine = todayIdx >= 0
+    ? `<line x1="${px(todayIdx).toFixed(1)}" y1="${PT}" x2="${px(todayIdx).toFixed(1)}" y2="${bottom}" stroke="#F59E0B" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
+       <text x="${px(todayIdx).toFixed(1)}" y="${PT - 2}" text-anchor="middle" fill="#F59E0B" font-size="8">today</text>`
+    : '';
+
+  const gradId = 'g' + containerId;
+
+  document.getElementById(containerId).innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible">
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${bottom}" stroke="#2A2D38" stroke-width="1"/>
+      <line x1="${PL}" y1="${bottom}" x2="${PL+IW}" y2="${bottom}" stroke="#2A2D38" stroke-width="1"/>
+      ${yTicks}
+      ${todayLine}
+      <path d="${areaD}" fill="url(#${gradId})"/>
+      <path d="${lineD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+      ${hitTargets}
+      ${xLabels}
+    </svg>`;
 }
 
 /* ── Defect table ── */
