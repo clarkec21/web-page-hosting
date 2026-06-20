@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>PS Defect Dashboard</title>
+<style>
+:root{
+  --bg:#0D0D0F;--surface:#16181D;--surface2:#1E2028;--border:#2A2D38;
+  --red:#EF4444;--red-dim:#7F1D1D;--orange:#F97316;--amber:#F59E0B;
+  --green:#22C55E;--blue:#3B82F6;--muted:#6B7280;--text:#F3F4F6;--text2:#9CA3AF;
+  --blocker:#DC2626;--critical:#DC2626;--high:#EA580C;--medium:#D97706;
+  --low:#3B82F6;--lowest:#4B5563;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 'Segoe UI',system-ui,sans-serif;min-height:100vh}
+a{color:var(--red);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Layout ── */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:1.1rem;font-weight:700;color:var(--red);letter-spacing:.04em}
+header h1 span{color:var(--text2);font-weight:400}
+#lastUpd{margin-left:auto;font-size:.78rem;color:var(--muted)}
+#busyBar{display:none;margin-left:8px;width:14px;height:14px;border:2px solid var(--red-dim);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+main{padding:20px 24px;display:grid;gap:20px}
+
+/* ── Error box ── */
+#errBox{display:none;background:#1C0A0A;border:1px solid var(--red-dim);border-radius:8px;padding:16px 20px;color:#FCA5A5;font-size:.9rem;line-height:1.7}
+#errBox code{background:#2D0A0A;padding:2px 5px;border-radius:4px;font-size:.85rem}
+
+/* ── KPI strip ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent,var(--red))}
+.kpi-val{font-size:2rem;font-weight:700;line-height:1;color:var(--accent,var(--red))}
+.kpi-lbl{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.kpi-sub{font-size:.72rem;color:var(--muted);margin-top:2px}
+
+/* ── Panels ── */
+.panels{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.panel-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+/* ── Priority bars ── */
+.prio-row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;border-radius:4px}
+.prio-row:hover{background:var(--surface2)}
+.prio-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.prio-name{width:70px;font-size:.8rem;color:var(--text)}
+.prio-bar-wrap{flex:1;background:var(--surface2);border-radius:4px;height:8px;overflow:hidden}
+.prio-bar{height:8px;border-radius:4px;transition:width .4s}
+.prio-cnt{width:30px;text-align:right;font-size:.8rem;color:var(--text2)}
+
+/* ── Age health ── */
+.age-row{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;border-radius:4px}
+.age-row:hover{background:var(--surface2)}
+.age-badge{padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:600;width:52px;text-align:center}
+.age-fresh{background:#052e16;color:#4ade80}
+.age-aging{background:#3b2000;color:#fbbf24}
+.age-stale{background:#2d0a0a;color:#f87171}
+.age-bar-wrap{flex:1;background:var(--surface2);border-radius:4px;height:8px;overflow:hidden}
+.age-bar{height:8px;border-radius:4px;transition:width .4s}
+.age-cnt{width:30px;text-align:right;font-size:.8rem;color:var(--text2)}
+
+/* ── Owner workload ── */
+.own-row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;border-radius:4px}
+.own-row:hover{background:var(--surface2)}
+.avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;background:var(--surface2);flex-shrink:0}
+.own-name{flex:1;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.own-bar-wrap{width:80px;background:var(--surface2);border-radius:4px;height:8px;overflow:hidden}
+.own-bar{height:8px;border-radius:4px;background:var(--orange);transition:width .4s}
+.own-cnt{width:24px;text-align:right;font-size:.8rem;color:var(--text2)}
+
+/* ── Trend chart ── */
+.trend-wrap{overflow-x:auto}
+.trend-chart{display:flex;align-items:flex-end;gap:12px;min-height:90px;padding:8px 0}
+.trend-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:48px}
+.trend-bars{display:flex;align-items:flex-end;gap:3px;height:70px}
+.trend-bar{width:18px;border-radius:3px 3px 0 0;transition:height .4s}
+.trend-open{background:var(--red)}
+.trend-done{background:var(--green)}
+.trend-lbl{font-size:.65rem;color:var(--muted);text-align:center;white-space:nowrap}
+.trend-legend{display:flex;gap:12px;font-size:.72rem;color:var(--text2);margin-top:8px}
+.trend-legend span{display:flex;align-items:center;gap:4px}
+.leg-dot{width:10px;height:10px;border-radius:2px}
+
+/* ── Defect table ── */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.tbl-hdr{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.tbl-hdr-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
+#filterInfo{font-size:.75rem;color:var(--orange);margin-left:8px}
+#clearFilter{font-size:.72rem;color:var(--muted);cursor:pointer;margin-left:auto;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2)}
+#clearFilter:hover{border-color:var(--text2)}
+table{width:100%;border-collapse:collapse}
+th{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px 12px;text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--text)}
+th.sorted{color:var(--red)}
+th.sorted::after{content:' ▾'}
+th.sorted.asc::after{content:' ▴'}
+td{padding:8px 12px;border-top:1px solid var(--border);font-size:.82rem;vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+.p-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;flex-shrink:0}
+.key-link{color:var(--text2);font-size:.78rem;white-space:nowrap}
+.summary-cell{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status-pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:.68rem;font-weight:600;white-space:nowrap}
+.age-cell{white-space:nowrap;font-size:.8rem}
+.assignee-cell{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.no-rows{padding:32px;text-align:center;color:var(--muted)}
+
+/* ── Active filter highlight ── */
+.active-filter{outline:2px solid var(--orange);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:10px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--red)"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <h1>PS Defect Dashboard <span>· board 2766</span></h1>
+  </div>
+  <div id="busyBar"></div>
+  <div id="lastUpd"></div>
+  <a href="phoenix-sprint.html" style="font-size:.78rem;color:var(--muted);margin-left:16px">← Sprint board</a>
+</header>
+
+<main>
+  <div id="errBox"></div>
+
+  <!-- KPIs -->
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <!-- Panels row -->
+  <div class="panels">
+    <div class="panel" id="prioPanel">
+      <div class="panel-title">Priority Breakdown</div>
+      <div id="prioList"></div>
+    </div>
+    <div class="panel" id="agePanel">
+      <div class="panel-title">Age Health</div>
+      <div id="ageList"></div>
+    </div>
+    <div class="panel" id="ownPanel">
+      <div class="panel-title">Defects by Owner</div>
+      <div id="ownList"></div>
+    </div>
+    <div class="panel" id="trendPanel">
+      <div class="panel-title">Sprint Trend — Open vs Resolved</div>
+      <div class="trend-wrap"><div class="trend-chart" id="trendChart"></div></div>
+      <div class="trend-legend">
+        <span><span class="leg-dot" style="background:var(--red)"></span>Open</span>
+        <span><span class="leg-dot" style="background:var(--green)"></span>Resolved</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Defect table -->
+  <div class="tbl-wrap">
+    <div class="tbl-hdr">
+      <span class="tbl-hdr-title">Defects</span>
+      <span id="filterInfo"></span>
+      <button id="clearFilter" onclick="clearFilter()" style="display:none">Clear filter ×</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('priority')" id="th-priority" class="sorted">Priority</th>
+          <th onclick="sortBy('key')" id="th-key">Key</th>
+          <th>Summary</th>
+          <th onclick="sortBy('status')" id="th-status">Status</th>
+          <th onclick="sortBy('age')" id="th-age">Age</th>
+          <th>Assignee</th>
+        </tr>
+      </thead>
+      <tbody id="defTbody"></tbody>
+    </table>
+    <div class="no-rows" id="noRows" style="display:none">No defects match the current filter.</div>
+  </div>
+</main>
+
+<script>
+const PRIO_ORDER = ['Blocker','Critical','High','Medium','Low','Lowest',''];
+const PRIO_COLOR = {
+  Blocker: '#DC2626', Critical: '#DC2626',
+  High:    '#EA580C', Medium:   '#D97706',
+  Low:     '#3B82F6', Lowest:   '#4B5563',
+};
+const STATUS_COLORS = {
+  done:       {bg:'#052e16',fg:'#4ade80'},
+  inprogress: {bg:'#1e3a5f',fg:'#60a5fa'},
+  todo:       {bg:'#1c1c2e',fg:'#818cf8'},
+  default:    {bg:'#1e2028',fg:'#9ca3af'},
+};
+
+let allDefects = [], trendData = [];
+let sortCol = 'priority', sortAsc = false;
+let activeFilter = null, filterType = null;
+
+function setBusy(v){ document.getElementById('busyBar').style.display = v ? 'inline-block' : 'none'; }
+
+function showErr(msg){
+  const b = document.getElementById('errBox');
+  b.innerHTML = msg + '<br><br>Click the <strong>Update Defects</strong> bookmark while logged into <code>nhbc.atlassian.net</code> to push fresh data.';
+  b.style.display = 'block';
+}
+
+function ageDays(created){ return Math.floor((Date.now() - new Date(created)) / 86400000); }
+
+function ageColor(d){
+  if(d < 7)  return {bg:'#052e16',fg:'#4ade80',label:'Fresh'};
+  if(d < 30) return {bg:'#3b2000',fg:'#fbbf24',label:'Aging'};
+  return            {bg:'#2d0a0a',fg:'#f87171',label:'Stale'};
+}
+
+function prioVal(p){ const i = PRIO_ORDER.indexOf(p); return i < 0 ? 99 : i; }
+
+function isDone(status){ return /done|complet|close|resolv|fixed/i.test(status); }
+
+function statusStyle(name){
+  const k = name.toLowerCase().replace(/\s/g,'');
+  if(isDone(k)) return STATUS_COLORS.done;
+  if(/inprogress|progress|development|review/i.test(k)) return STATUS_COLORS.inprogress;
+  if(/todo|open|backlog|new/i.test(k)) return STATUS_COLORS.todo;
+  return STATUS_COLORS.default;
+}
+
+async function loadAll(){
+  setBusy(true);
+  try{
+    const r = await fetch('./defects.json?_='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error('No data yet.');
+    const d = await r.json();
+    if(!Array.isArray(d.defects)) throw new Error('defects.json is malformed.');
+    allDefects = d.defects;
+    trendData  = d.trend || [];
+    const age = d.fetchedAt
+      ? Math.round((Date.now()-new Date(d.fetchedAt))/60000)+'m ago'
+      : '';
+    document.getElementById('lastUpd').textContent =
+      'Data ' + (age || '') + ' · ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('errBox').style.display = 'none';
+    render();
+  } catch(e){
+    showErr(e.message);
+  } finally{
+    setBusy(false);
+  }
+}
+
+function openDefects(){
+  return allDefects.filter(i => !isDone(i.fields.status.name));
+}
+
+function filteredDefects(){
+  if(!activeFilter) return allDefects;
+  if(filterType === 'priority')
+    return allDefects.filter(i => (i.fields.priority?.name || '') === activeFilter);
+  if(filterType === 'age'){
+    return allDefects.filter(i => {
+      const d = ageDays(i.fields.created);
+      if(activeFilter === 'Fresh') return d < 7;
+      if(activeFilter === 'Aging') return d >= 7 && d < 30;
+      return d >= 30;
+    });
+  }
+  if(filterType === 'owner')
+    return allDefects.filter(i => (i.fields.assignee?.displayName || 'Unassigned') === activeFilter);
+  return allDefects;
+}
+
+function setFilter(type, val, el){
+  if(activeFilter === val && filterType === type){ clearFilter(); return; }
+  activeFilter = val; filterType = type;
+  document.querySelectorAll('.active-filter').forEach(e => e.classList.remove('active-filter'));
+  if(el) el.classList.add('active-filter');
+  document.getElementById('filterInfo').textContent = 'Filtered: ' + val;
+  document.getElementById('clearFilter').style.display = 'inline-block';
+  renderTable();
+}
+
+function clearFilter(){
+  activeFilter = null; filterType = null;
+  document.querySelectorAll('.active-filter').forEach(e => e.classList.remove('active-filter'));
+  document.getElementById('filterInfo').textContent = '';
+  document.getElementById('clearFilter').style.display = 'none';
+  renderTable();
+}
+
+function render(){
+  renderKpi();
+  renderPriority();
+  renderAge();
+  renderOwner();
+  renderTrend();
+  renderTable();
+}
+
+/* ── KPIs ── */
+function renderKpi(){
+  const open = openDefects();
+  const blockerCrit = open.filter(i => ['Blocker','Critical'].includes(i.fields.priority?.name)).length;
+  const high        = open.filter(i => i.fields.priority?.name === 'High').length;
+  const inProg      = open.filter(i => /inprogress|progress|development|review/i.test(i.fields.status.name.toLowerCase().replace(/\s/g,''))).length;
+  const resolved    = allDefects.filter(i => isDone(i.fields.status.name)).length;
+  const oldest      = open.length ? Math.max(...open.map(i => ageDays(i.fields.created))) : 0;
+
+  const kpis = [
+    {val: open.length,     lbl: 'Open Defects',       accent:'var(--red)',    sub:'total unresolved'},
+    {val: blockerCrit,     lbl: 'Blocker / Critical',  accent:'var(--blocker)',sub:'highest severity'},
+    {val: high,            lbl: 'High Priority',       accent:'var(--orange)', sub:'needs attention'},
+    {val: inProg,          lbl: 'In Progress',         accent:'var(--blue)',   sub:'being worked'},
+    {val: resolved,        lbl: 'Resolved',            accent:'var(--green)',  sub:'all time in board'},
+    {val: oldest + 'd',    lbl: 'Oldest Open',         accent: oldest >= 30 ? 'var(--red)' : oldest >= 7 ? 'var(--amber)' : 'var(--green)', sub:'days since creation'},
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k => `
+    <div class="kpi" style="--accent:${k.accent}">
+      <div class="kpi-val">${k.val}</div>
+      <div class="kpi-lbl">${k.lbl}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+/* ── Priority breakdown ── */
+function renderPriority(){
+  const open = openDefects();
+  const counts = {};
+  PRIO_ORDER.forEach(p => { if(p) counts[p] = 0; });
+  open.forEach(i => { const p = i.fields.priority?.name || 'Unknown'; if(counts[p]!==undefined) counts[p]++; else counts[p]=1; });
+  const max = Math.max(1, ...Object.values(counts));
+  const order = ['Blocker','Critical','High','Medium','Low','Lowest'];
+  document.getElementById('prioList').innerHTML = order.map(p => {
+    const c = counts[p] || 0;
+    if(!c) return '';
+    const col = PRIO_COLOR[p] || '#6B7280';
+    return `<div class="prio-row" id="pr-${p}" onclick="setFilter('priority','${p}',this)">
+      <span class="prio-dot" style="background:${col}"></span>
+      <span class="prio-name">${p}</span>
+      <div class="prio-bar-wrap"><div class="prio-bar" style="width:${Math.round(c/max*100)}%;background:${col}"></div></div>
+      <span class="prio-cnt">${c}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ── Age health ── */
+function renderAge(){
+  const open = openDefects();
+  const fresh = open.filter(i => ageDays(i.fields.created) < 7).length;
+  const aging = open.filter(i => { const d = ageDays(i.fields.created); return d >= 7 && d < 30; }).length;
+  const stale = open.filter(i => ageDays(i.fields.created) >= 30).length;
+  const max = Math.max(1, fresh, aging, stale);
+  const rows = [
+    {label:'Fresh', cls:'age-fresh', barColor:'#22c55e', count:fresh},
+    {label:'Aging', cls:'age-aging', barColor:'#f59e0b', count:aging},
+    {label:'Stale', cls:'age-stale', barColor:'#ef4444', count:stale},
+  ];
+  document.getElementById('ageList').innerHTML = rows.map(r => `
+    <div class="age-row" id="ag-${r.label}" onclick="setFilter('age','${r.label}',this)">
+      <span class="age-badge ${r.cls}">${r.label}</span>
+      <div class="age-bar-wrap"><div class="age-bar" style="width:${Math.round(r.count/max*100)}%;background:${r.barColor}"></div></div>
+      <span class="age-cnt">${r.count}</span>
+    </div>`).join('');
+}
+
+/* ── Owner workload ── */
+function renderOwner(){
+  const open = openDefects();
+  const map = {};
+  const avatars = {};
+  open.forEach(i => {
+    const n = i.fields.assignee?.displayName || 'Unassigned';
+    const av = i.fields.assignee?.avatarUrls?.['24x24'] || '';
+    map[n] = (map[n]||0) + 1;
+    if(av) avatars[n] = av;
+  });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(1, ...sorted.map(e=>e[1]));
+  document.getElementById('ownList').innerHTML = sorted.map(([n,c]) => `
+    <div class="own-row" id="ow-${CSS.escape(n)}" onclick="setFilter('owner',${JSON.stringify(n)},this)">
+      ${avatars[n] ? `<img class="avatar" src="${avatars[n]}" alt="">` : `<div class="avatar"></div>`}
+      <span class="own-name" title="${n}">${n}</span>
+      <div class="own-bar-wrap"><div class="own-bar" style="width:${Math.round(c/max*100)}%"></div></div>
+      <span class="own-cnt">${c}</span>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:.8rem">No open defects</div>';
+}
+
+/* ── Sprint trend ── */
+function renderTrend(){
+  if(!trendData.length) return;
+  const maxVal = Math.max(1,...trendData.flatMap(t=>[t.open||0,t.closed||0]));
+  const H = 70;
+  document.getElementById('trendChart').innerHTML = trendData.map(t => {
+    const oh = Math.round(((t.open||0)/maxVal)*H);
+    const ch = Math.round(((t.closed||0)/maxVal)*H);
+    return `<div class="trend-col">
+      <div class="trend-bars">
+        <div class="trend-bar trend-open" style="height:${oh}px" title="Open: ${t.open||0}"></div>
+        <div class="trend-bar trend-done" style="height:${ch}px" title="Resolved: ${t.closed||0}"></div>
+      </div>
+      <div class="trend-lbl">${t.name}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── Defect table ── */
+function sortBy(col){
+  if(sortCol === col){ sortAsc = !sortAsc; }
+  else { sortCol = col; sortAsc = col === 'key'; }
+  document.querySelectorAll('th[id^="th-"]').forEach(el => {
+    el.classList.remove('sorted','asc');
+  });
+  const th = document.getElementById('th-'+col);
+  if(th){ th.classList.add('sorted'); if(sortAsc) th.classList.add('asc'); }
+  renderTable();
+}
+
+function renderTable(){
+  const rows = filteredDefects().slice();
+  rows.sort((a,b)=>{
+    let va, vb;
+    if(sortCol==='priority'){
+      va = prioVal(a.fields.priority?.name||''); vb = prioVal(b.fields.priority?.name||'');
+      if(va!==vb) return sortAsc ? va-vb : vb-va;
+      return ageDays(b.fields.created) - ageDays(a.fields.created);
+    }
+    if(sortCol==='age'){
+      va = ageDays(a.fields.created); vb = ageDays(b.fields.created);
+    } else if(sortCol==='status'){
+      va = a.fields.status.name; vb = b.fields.status.name;
+    } else if(sortCol==='key'){
+      va = a.key; vb = b.key;
+    }
+    if(va===undefined) return 0;
+    if(typeof va==='string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va-vb : vb-va;
+  });
+
+  const tbody = document.getElementById('defTbody');
+  const noRows = document.getElementById('noRows');
+  if(!rows.length){ tbody.innerHTML=''; noRows.style.display='block'; return; }
+  noRows.style.display='none';
+
+  tbody.innerHTML = rows.map(i=>{
+    const f = i.fields;
+    const p = f.priority?.name || '';
+    const pColor = PRIO_COLOR[p] || '#6B7280';
+    const d = ageDays(f.created);
+    const ac = ageColor(d);
+    const ss = statusStyle(f.status.name);
+    const assignee = f.assignee?.displayName || 'Unassigned';
+    const av = f.assignee?.avatarUrls?.['24x24'] || '';
+    const url = `https://nhbc.atlassian.net/browse/${i.key}`;
+    return `<tr>
+      <td><span class="p-dot" style="background:${pColor}"></span>${p||'—'}</td>
+      <td><a href="${url}" target="_blank" class="key-link">${i.key}</a></td>
+      <td class="summary-cell" title="${f.summary.replace(/"/g,'&quot;')}">${f.summary}</td>
+      <td><span class="status-pill" style="background:${ss.bg};color:${ss.fg}">${f.status.name}</span></td>
+      <td class="age-cell" style="color:${ac.fg}">${d}d</td>
+      <td class="assignee-cell">${av?`<img class="avatar" src="${av}" alt="">`:'<div class="avatar"></div>'}<span>${assignee}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+loadAll();
+</script>
+</body>
+</html>
