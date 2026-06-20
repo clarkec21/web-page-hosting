@@ -163,7 +163,7 @@ tr:hover td{background:var(--surface2)}
     </div>
     <div class="panel" id="testPanel" style="border-color:#3D2B6B">
       <div class="panel-title" style="border-color:#3D2B6B">
-        Test Phase
+        Test Phase (SIT)
         <span class="panel-sub" id="testStatusLabel"></span>
       </div>
       <div id="testContent"></div>
@@ -261,7 +261,7 @@ function prioVal(p){ const i = PRIO_ORDER.indexOf(p); return i < 0 ? 99 : i; }
 
 function isDone(status){ return /done|complet|close|resolv|fixed/i.test(status); }
 
-function isTestPhase(status){ return /test/i.test(status); }
+function isTestPhase(status){ return /sit/i.test(status); }
 
 function statusStyle(name){
   const k = name.toLowerCase().replace(/\s/g,'');
@@ -298,7 +298,6 @@ function openDefects(){
   return allDefects.filter(i => !isDone(i.fields.status.name));
 }
 
-/* Table always works from the open subset only */
 function filteredDefects(){
   const base = openDefects();
   if(!activeFilter) return base;
@@ -434,7 +433,7 @@ function renderOwner(){
     </div>`).join('') || '<div style="color:var(--muted);font-size:.8rem">No open defects</div>';
 }
 
-/* ── Test Phase panel ── */
+/* ── Test Phase (SIT) panel ── */
 function renderTestPhase(){
   const inTest = openDefects().filter(i => isTestPhase(i.fields.status.name));
   const el = document.getElementById('testContent');
@@ -442,15 +441,13 @@ function renderTestPhase(){
 
   if(!inTest.length){
     lbl.textContent = '';
-    el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;padding:4px 0">No defects currently in test phase</div>';
+    el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;padding:4px 0">No defects currently in SIT</div>';
     return;
   }
 
-  // Collect distinct status names that matched, for subtitle
   const statuses = [...new Set(inTest.map(i => i.fields.status.name))];
   lbl.textContent = statuses.join(' · ');
 
-  // Priority counts
   const counts = {};
   PRIO_ORDER.forEach(p => { if(p) counts[p] = 0; });
   inTest.forEach(i => {
@@ -472,14 +469,12 @@ function renderTestPhase(){
     </div>`;
   }).join('');
 
-  // Age stats
   const ages = inTest.map(i => ageDays(i.fields.created));
   const avgAge = Math.round(ages.reduce((a,b)=>a+b,0) / ages.length);
   const maxAge = Math.max(...ages);
   const maxAgeCol = maxAge >= 30 ? 'var(--red)' : maxAge >= 7 ? 'var(--amber)' : 'var(--green)';
   const avgAgeCol = avgAge >= 30 ? 'var(--red)' : avgAge >= 7 ? 'var(--amber)' : 'var(--green)';
 
-  // Sorted items for mini-list (priority desc, then age desc)
   const sorted = inTest.slice().sort((a,b) => {
     const pd = prioVal(a.fields.priority?.name||'') - prioVal(b.fields.priority?.name||'');
     return pd !== 0 ? pd : ageDays(b.fields.created) - ageDays(a.fields.created);
@@ -503,7 +498,7 @@ function renderTestPhase(){
     <div class="test-stat-row">
       <div class="test-stat">
         <span class="test-stat-val">${inTest.length}</span>
-        <span class="test-stat-lbl">In test</span>
+        <span class="test-stat-lbl">In SIT</span>
       </div>
       <div class="test-stat">
         <span class="test-stat-val" style="color:${avgAgeCol}">${avgAge}d</span>
@@ -557,10 +552,8 @@ function renderDailyCharts(){
 
   allDefects.forEach(issue => {
     const f = issue.fields;
-
     const c = (f.created || '').split('T')[0];
     if(c in raised) raised[c]++;
-
     let r = (f.resolutiondate || '').split('T')[0];
     if(!r && isDone(f.status.name)) r = (f.updated || '').split('T')[0];
     if(r && r in closed) closed[r]++;
@@ -617,13 +610,13 @@ function renderLineSvg(containerId, days, data, color){
   const dots = values.map((v, i) => {
     if(v === 0) return '';
     const dt = new Date(days[i] + 'T12:00:00');
-    const lbl = `${dt.getDate()}/${dt.getMonth()+1}: ${v}`;
-    return `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.5" fill="${color}" stroke="#0D0D0F" stroke-width="1.5"><title>${lbl}</title></circle>`;
+    return `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.5" fill="${color}" stroke="#0D0D0F" stroke-width="1.5"><title>${dt.getDate()}/${dt.getMonth()+1}: ${v}</title></circle>`;
   }).join('');
 
-  const hitTargets = values.map((v, i) =>
-    `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="8" fill="transparent"><title>${new Date(days[i]+'T12:00:00').getDate()}/${new Date(days[i]+'T12:00:00').getMonth()+1}: ${v}</title></circle>`
-  ).join('');
+  const hitTargets = values.map((v, i) => {
+    const dt = new Date(days[i] + 'T12:00:00');
+    return `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="8" fill="transparent"><title>${dt.getDate()}/${dt.getMonth()+1}: ${v}</title></circle>`;
+  }).join('');
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayIdx = days.indexOf(todayStr);
