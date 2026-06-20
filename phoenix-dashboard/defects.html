@@ -88,6 +88,13 @@ main{padding:20px 24px;display:grid;gap:20px}
 .test-item-key{color:var(--violet);white-space:nowrap;font-size:.72rem}
 .test-item-sum{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
 
+/* ── Resolution pie legend ── */
+.res-legend-row{display:flex;align-items:center;gap:6px;padding:3px 0}
+.res-legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.res-legend-name{flex:1;font-size:.75rem;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res-legend-cnt{font-size:.75rem;color:var(--text);font-weight:600}
+.res-legend-pct{font-size:.68rem;color:var(--muted);width:32px;text-align:right}
+
 /* ── Sprint trend bars ── */
 .trend-wrap{overflow-x:auto}
 .trend-chart{display:flex;align-items:flex-end;gap:12px;min-height:90px;padding:8px 0}
@@ -168,6 +175,13 @@ tr:hover td{background:var(--surface2)}
       </div>
       <div id="testContent"></div>
     </div>
+    <div class="panel" id="resPiePanel">
+      <div class="panel-title">
+        Resolution Reasons
+        <span class="panel-sub" id="resPieSub"></span>
+      </div>
+      <div id="resPieContent"></div>
+    </div>
     <div class="panel" id="trendPanel">
       <div class="panel-title">Sprint Trend — Open vs Resolved</div>
       <div class="trend-wrap"><div class="trend-chart" id="trendChart"></div></div>
@@ -234,6 +248,17 @@ const STATUS_COLORS = {
   todo:       {bg:'#1c1c2e',fg:'#818cf8'},
   default:    {bg:'#1e2028',fg:'#9ca3af'},
 };
+const RES_COLORS = {
+  'Done':             '#22C55E',
+  'Fixed':            '#22C55E',
+  "Won't Fix":        '#EF4444',
+  "Won't Do":         '#EF4444',
+  'Duplicate':        '#F97316',
+  'Cannot Reproduce': '#F59E0B',
+  'Incomplete':       '#6B7280',
+  'By Design':        '#3B82F6',
+};
+const RES_PALETTE = ['#22C55E','#3B82F6','#F59E0B','#F97316','#EF4444','#A78BFA','#EC4899','#6B7280','#14B8A6'];
 
 const CHART_START = '2026-06-16';
 
@@ -340,6 +365,7 @@ function render(){
   renderAge();
   renderOwner();
   renderTestPhase();
+  renderResolutionPie();
   renderTrend();
   renderDailyCharts();
   renderTable();
@@ -454,10 +480,9 @@ function renderTestPhase(){
     const p = i.fields.priority?.name || 'Unknown';
     if(counts[p] !== undefined) counts[p]++; else counts[p] = 1;
   });
-  const prioOrder = ['Blocker','Critical','High','Medium','Low','Lowest'];
   const max = Math.max(1, ...Object.values(counts));
 
-  const prioHtml = prioOrder.map(p => {
+  const prioHtml = ['Blocker','Critical','High','Medium','Low','Lowest'].map(p => {
     const c = counts[p] || 0;
     if(!c) return '';
     const col = PRIO_COLOR[p] || '#6B7280';
@@ -496,21 +521,87 @@ function renderTestPhase(){
 
   el.innerHTML = `
     <div class="test-stat-row">
-      <div class="test-stat">
-        <span class="test-stat-val">${inTest.length}</span>
-        <span class="test-stat-lbl">In SIT</span>
-      </div>
-      <div class="test-stat">
-        <span class="test-stat-val" style="color:${avgAgeCol}">${avgAge}d</span>
-        <span class="test-stat-lbl">Avg age</span>
-      </div>
-      <div class="test-stat">
-        <span class="test-stat-val" style="color:${maxAgeCol}">${maxAge}d</span>
-        <span class="test-stat-lbl">Oldest</span>
-      </div>
+      <div class="test-stat"><span class="test-stat-val">${inTest.length}</span><span class="test-stat-lbl">In SIT</span></div>
+      <div class="test-stat"><span class="test-stat-val" style="color:${avgAgeCol}">${avgAge}d</span><span class="test-stat-lbl">Avg age</span></div>
+      <div class="test-stat"><span class="test-stat-val" style="color:${maxAgeCol}">${maxAge}d</span><span class="test-stat-lbl">Oldest</span></div>
     </div>
     ${prioHtml}
     <div style="margin-top:10px">${itemsHtml}</div>`;
+}
+
+/* ── Resolution reasons donut chart ── */
+function renderResolutionPie(){
+  const resolved = allDefects.filter(i => isDone(i.fields.status.name));
+  const el  = document.getElementById('resPieContent');
+  const sub = document.getElementById('resPieSub');
+
+  if(!resolved.length){
+    sub.textContent = '';
+    el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;padding:4px 0">No resolved defects yet</div>';
+    return;
+  }
+
+  // Count by resolution name; fall back to status name if no resolution field present
+  const counts = {};
+  resolved.forEach(i => {
+    const r = i.fields.resolution?.name || i.fields.status.name || 'Unknown';
+    counts[r] = (counts[r] || 0) + 1;
+  });
+
+  const total = resolved.length;
+  sub.textContent = total + ' resolved';
+
+  const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+
+  // Assign colours
+  const colMap = {};
+  let paletteIdx = 0;
+  entries.forEach(([name]) => {
+    colMap[name] = RES_COLORS[name] || RES_PALETTE[paletteIdx++ % RES_PALETTE.length];
+  });
+
+  // Build donut slices (SVG arc paths)
+  const CX = 70, CY = 70, R = 55, r = 32;
+  let angle = -Math.PI / 2;
+
+  function arcPath(start, end){
+    const x1o = CX + R * Math.cos(start), y1o = CY + R * Math.sin(start);
+    const x2o = CX + R * Math.cos(end),   y2o = CY + R * Math.sin(end);
+    const x1i = CX + r * Math.cos(end),   y1i = CY + r * Math.sin(end);
+    const x2i = CX + r * Math.cos(start), y2i = CY + r * Math.sin(start);
+    const large = (end - start) > Math.PI ? 1 : 0;
+    return `M${x1o.toFixed(2)},${y1o.toFixed(2)} A${R},${R} 0 ${large},1 ${x2o.toFixed(2)},${y2o.toFixed(2)} L${x1i.toFixed(2)},${y1i.toFixed(2)} A${r},${r} 0 ${large},0 ${x2i.toFixed(2)},${y2i.toFixed(2)} Z`;
+  }
+
+  const slices = entries.map(([name, count]) => {
+    const sweep = (count / total) * 2 * Math.PI;
+    const start = angle;
+    angle += sweep;
+    const pct = Math.round(count / total * 100);
+    return `<path d="${arcPath(start, angle)}" fill="${colMap[name]}" stroke="#16181D" stroke-width="1.5">
+      <title>${name}: ${count} (${pct}%)</title>
+    </path>`;
+  }).join('');
+
+  const legend = entries.map(([name, count]) => {
+    const pct = Math.round(count / total * 100);
+    return `<div class="res-legend-row">
+      <span class="res-legend-swatch" style="background:${colMap[name]}"></span>
+      <span class="res-legend-name" title="${name}">${name}</span>
+      <span class="res-legend-cnt">${count}</span>
+      <span class="res-legend-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <svg viewBox="0 0 140 140" width="130" height="130" style="flex-shrink:0">
+        ${slices}
+        <text x="${CX}" y="${CY - 6}" text-anchor="middle" fill="#F3F4F6" font-size="18" font-weight="700">${total}</text>
+        <text x="${CX}" y="${CY + 10}" text-anchor="middle" fill="#6B7280" font-size="9">resolved</text>
+      </svg>
+      <div style="flex:1;min-width:110px">${legend}</div>
+    </div>`;
 }
 
 /* ── Sprint trend ── */
@@ -568,93 +659,69 @@ function renderLineSvg(containerId, days, data, color){
 
   const W = 440, H = 145;
   const PL = 30, PR = 10, PT = 10, PB = 28;
-  const IW = W - PL - PR;
-  const IH = H - PT - PB;
-  const bottom = PT + IH;
-
+  const IW = W - PL - PR, IH = H - PT - PB, bottom = PT + IH;
   const values = days.map(d => data[d] || 0);
   const maxVal = Math.max(1, ...values);
   const n = days.length;
-
   const px = i => PL + (n > 1 ? i / (n - 1) : 0.5) * IW;
   const py = v => PT + (1 - v / maxVal) * IH;
 
-  const areaD = [
-    `M${px(0)},${bottom}`,
-    `L${px(0)},${py(values[0])}`,
-    ...values.slice(1).map((v,i) => `L${px(i+1)},${py(v)}`),
-    `L${px(n-1)},${bottom}`,
-    'Z'
-  ].join(' ');
-
-  const lineD = [
-    `M${px(0)},${py(values[0])}`,
-    ...values.slice(1).map((v,i) => `L${px(i+1)},${py(v)}`)
-  ].join(' ');
+  const areaD = [`M${px(0)},${bottom}`,`L${px(0)},${py(values[0])}`,
+    ...values.slice(1).map((v,i)=>`L${px(i+1)},${py(v)}`),`L${px(n-1)},${bottom}`,'Z'].join(' ');
+  const lineD = [`M${px(0)},${py(values[0])}`,
+    ...values.slice(1).map((v,i)=>`L${px(i+1)},${py(v)}`)].join(' ');
 
   const step = n <= 7 ? 1 : n <= 14 ? 2 : Math.ceil(n / 7);
-  const xLabels = days.map((d, i) => {
-    if(i % step !== 0 && i !== n - 1) return '';
-    const dt = new Date(d + 'T12:00:00');
-    return `<text x="${px(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" fill="#6B7280" font-size="9">${dt.getDate()}/${dt.getMonth()+1}</text>`;
+  const xLabels = days.map((d,i) => {
+    if(i % step !== 0 && i !== n-1) return '';
+    const dt = new Date(d+'T12:00:00');
+    return `<text x="${px(i).toFixed(1)}" y="${H-8}" text-anchor="middle" fill="#6B7280" font-size="9">${dt.getDate()}/${dt.getMonth()+1}</text>`;
   }).join('');
 
   const mid = Math.ceil(maxVal / 2);
-  const yTicks = [...new Set([0, mid, maxVal])].map(v => {
-    const y = py(v).toFixed(1);
-    const dash = v === 0 ? '' : 'stroke-dasharray="4,4"';
+  const yTicks = [...new Set([0,mid,maxVal])].map(v => {
+    const y = py(v).toFixed(1), dash = v===0?'':'stroke-dasharray="4,4"';
     return `<line x1="${PL}" y1="${y}" x2="${PL+IW}" y2="${y}" stroke="#2A2D38" stroke-width="1" ${dash}/>
             <text x="${PL-4}" y="${(py(v)+3).toFixed(1)}" text-anchor="end" fill="#6B7280" font-size="9">${v}</text>`;
   }).join('');
 
-  const dots = values.map((v, i) => {
-    if(v === 0) return '';
-    const dt = new Date(days[i] + 'T12:00:00');
+  const dots = values.map((v,i) => {
+    if(!v) return '';
+    const dt = new Date(days[i]+'T12:00:00');
     return `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.5" fill="${color}" stroke="#0D0D0F" stroke-width="1.5"><title>${dt.getDate()}/${dt.getMonth()+1}: ${v}</title></circle>`;
   }).join('');
-
-  const hitTargets = values.map((v, i) => {
-    const dt = new Date(days[i] + 'T12:00:00');
+  const hits = values.map((v,i) => {
+    const dt = new Date(days[i]+'T12:00:00');
     return `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="8" fill="transparent"><title>${dt.getDate()}/${dt.getMonth()+1}: ${v}</title></circle>`;
   }).join('');
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayIdx = days.indexOf(todayStr);
-  const todayLine = todayIdx >= 0
-    ? `<line x1="${px(todayIdx).toFixed(1)}" y1="${PT}" x2="${px(todayIdx).toFixed(1)}" y2="${bottom}" stroke="#F59E0B" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
-       <text x="${px(todayIdx).toFixed(1)}" y="${PT - 2}" text-anchor="middle" fill="#F59E0B" font-size="8">today</text>`
-    : '';
+  const ti = days.indexOf(todayStr);
+  const todayLine = ti>=0
+    ? `<line x1="${px(ti).toFixed(1)}" y1="${PT}" x2="${px(ti).toFixed(1)}" y2="${bottom}" stroke="#F59E0B" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>
+       <text x="${px(ti).toFixed(1)}" y="${PT-2}" text-anchor="middle" fill="#F59E0B" font-size="8">today</text>` : '';
 
-  const gradId = 'g' + containerId;
-
+  const gradId = 'g'+containerId;
   document.getElementById(containerId).innerHTML =
     `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible">
-      <defs>
-        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.28"/>
-          <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
-        </linearGradient>
-      </defs>
+      <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+      </linearGradient></defs>
       <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${bottom}" stroke="#2A2D38" stroke-width="1"/>
       <line x1="${PL}" y1="${bottom}" x2="${PL+IW}" y2="${bottom}" stroke="#2A2D38" stroke-width="1"/>
-      ${yTicks}
-      ${todayLine}
+      ${yTicks}${todayLine}
       <path d="${areaD}" fill="url(#${gradId})"/>
       <path d="${lineD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      ${dots}
-      ${hitTargets}
-      ${xLabels}
+      ${dots}${hits}${xLabels}
     </svg>`;
 }
 
 /* ── Defect table ── */
 function sortBy(col){
-  if(sortCol === col){ sortAsc = !sortAsc; }
-  else { sortCol = col; sortAsc = col === 'key'; }
-  document.querySelectorAll('th[id^="th-"]').forEach(el => {
-    el.classList.remove('sorted','asc');
-  });
-  const th = document.getElementById('th-'+col);
+  if(sortCol===col){ sortAsc=!sortAsc; } else { sortCol=col; sortAsc=col==='key'; }
+  document.querySelectorAll('th[id^="th-"]').forEach(el=>el.classList.remove('sorted','asc'));
+  const th=document.getElementById('th-'+col);
   if(th){ th.classList.add('sorted'); if(sortAsc) th.classList.add('asc'); }
   renderTable();
 }
@@ -662,46 +729,34 @@ function sortBy(col){
 function renderTable(){
   const rows = filteredDefects().slice();
   rows.sort((a,b)=>{
-    let va, vb;
+    let va,vb;
     if(sortCol==='priority'){
-      va = prioVal(a.fields.priority?.name||''); vb = prioVal(b.fields.priority?.name||'');
-      if(va!==vb) return sortAsc ? va-vb : vb-va;
-      return ageDays(b.fields.created) - ageDays(a.fields.created);
+      va=prioVal(a.fields.priority?.name||''); vb=prioVal(b.fields.priority?.name||'');
+      if(va!==vb) return sortAsc?va-vb:vb-va;
+      return ageDays(b.fields.created)-ageDays(a.fields.created);
     }
-    if(sortCol==='age'){
-      va = ageDays(a.fields.created); vb = ageDays(b.fields.created);
-    } else if(sortCol==='status'){
-      va = a.fields.status.name; vb = b.fields.status.name;
-    } else if(sortCol==='key'){
-      va = a.key; vb = b.key;
-    }
+    if(sortCol==='age'){ va=ageDays(a.fields.created); vb=ageDays(b.fields.created); }
+    else if(sortCol==='status'){ va=a.fields.status.name; vb=b.fields.status.name; }
+    else if(sortCol==='key'){ va=a.key; vb=b.key; }
     if(va===undefined) return 0;
-    if(typeof va==='string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-    return sortAsc ? va-vb : vb-va;
+    if(typeof va==='string') return sortAsc?va.localeCompare(vb):vb.localeCompare(va);
+    return sortAsc?va-vb:vb-va;
   });
 
-  const tbody  = document.getElementById('defTbody');
-  const noRows = document.getElementById('noRows');
-  const count  = document.getElementById('openCount');
-
-  const open = openDefects();
-  count.textContent = activeFilter
-    ? `${rows.length} of ${open.length}`
-    : `${open.length}`;
+  const tbody=document.getElementById('defTbody');
+  const noRows=document.getElementById('noRows');
+  const count=document.getElementById('openCount');
+  const open=openDefects();
+  count.textContent = activeFilter ? `${rows.length} of ${open.length}` : `${open.length}`;
 
   if(!rows.length){ tbody.innerHTML=''; noRows.style.display='block'; return; }
   noRows.style.display='none';
 
   tbody.innerHTML = rows.map(i=>{
-    const f = i.fields;
-    const p = f.priority?.name || '';
-    const pColor = PRIO_COLOR[p] || '#6B7280';
-    const d = ageDays(f.created);
-    const ac = ageColor(d);
-    const ss = statusStyle(f.status.name);
-    const assignee = f.assignee?.displayName || 'Unassigned';
-    const av = f.assignee?.avatarUrls?.['24x24'] || '';
-    const url = `https://nhbc.atlassian.net/browse/${i.key}`;
+    const f=i.fields, p=f.priority?.name||'', pColor=PRIO_COLOR[p]||'#6B7280';
+    const d=ageDays(f.created), ac=ageColor(d), ss=statusStyle(f.status.name);
+    const assignee=f.assignee?.displayName||'Unassigned', av=f.assignee?.avatarUrls?.['24x24']||'';
+    const url=`https://nhbc.atlassian.net/browse/${i.key}`;
     return `<tr>
       <td><span class="p-dot" style="background:${pColor}"></span>${p||'—'}</td>
       <td><a href="${url}" target="_blank" class="key-link">${i.key}</a></td>
