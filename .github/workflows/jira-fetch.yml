@@ -1,190 +1,21 @@
-# .github/workflows/jira-fetch.yml
-#
-# Fetches Jira sprint data and commits phoenix-dashboard/data.json via
-# the GitHub API. Uses shell: python on every step — no bash required,
-# so works on a Windows self-hosted runner without Git Bash in PATH.
-#
-# Repository secrets required (Settings → Secrets and variables → Actions):
-#   JIRA_EMAIL  — cjclarke@nhbc.co.uk
-#   JIRA_TOKEN  — Atlassian API token
+# jira-fetch.yml — DISABLED
+# Replaced by browser bookmarklet approach (no Jira API token required).
+# Kept here in case the server-side approach is revisited.
+# To re-enable: restore the schedule trigger and switch runs-on back to ubuntu-latest.
 
-name: Fetch Jira Sprint Data
+name: Fetch Jira Sprint Data (disabled)
 
 on:
-  schedule:
-    - cron: '*/5 * * * 1-5'   # every 5 min, Mon–Fri
-  workflow_dispatch:
+  workflow_dispatch:   # manual only — schedule removed
 
 jobs:
   fetch:
     runs-on: self-hosted
+    if: false   # prevents accidental manual runs
     permissions:
       contents: write
-
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Validate secrets shape
-        shell: python
-        env:
-          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
-          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
-        run: |
-          import os, base64
-
-          email = os.environ.get('JIRA_EMAIL', '')
-          token = os.environ.get('JIRA_TOKEN', '')
-
-          print(f'JIRA_EMAIL : "{email}"')
-          print(f'  length   : {len(email)}')
-          print(f'  stripped : differs={email != email.strip()}')
-
-          tlen  = len(token)
-          tmask = token[:6] + '...' + token[-6:] if tlen > 12 else '(too short)'
-          print(f'JIRA_TOKEN : {tmask}')
-          print(f'  length   : {tlen}  (expected ~200 chars)')
-          print(f'  stripped : differs={token != token.strip()}')
-
-          if not email or not token:
-              raise RuntimeError('One or both secrets are empty')
-          if email != email.strip() or token != token.strip():
-              raise RuntimeError('Secret has leading/trailing whitespace — re-enter without spaces')
-          if tlen < 50:
-              raise RuntimeError(f'Token too short ({tlen} chars) — may have been truncated')
-
-          b64 = base64.b64encode(f'{email}:{token}'.encode()).decode()
-          print(f'\nBase64 header (first 30): {b64[:30]}...')
-
-      - name: Fetch sprint + issues from Jira
-        shell: python
-        env:
-          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
-          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
-          DATA_PATH:  ${{ runner.temp }}/data.json
-        run: |
-          import json, re, urllib.request, urllib.error, base64, os, time
-          from datetime import datetime, timezone
-
-          email  = os.environ['JIRA_EMAIL'].strip()
-          token  = os.environ['JIRA_TOKEN'].strip()
-          domain = 'nhbc.atlassian.net'
-          board  = '2766'
-          fields = 'summary,status,issuetype,priority,assignee,customfield_10016'
-          out_path = os.environ['DATA_PATH']
-
-          b64 = base64.b64encode(f'{email}:{token}'.encode()).decode()
-          hdr = {'Authorization': 'Basic ' + b64, 'Accept': 'application/json'}
-
-          def fetch(url, retries=3):
-              for attempt in range(retries):
-                  try:
-                      req = urllib.request.Request(url, headers=hdr)
-                      with urllib.request.urlopen(req, timeout=30) as r:
-                          return json.loads(r.read())
-                  except urllib.error.HTTPError as e:
-                      body = e.read().decode('utf-8', errors='replace')[:600]
-                      print(f'  HTTP {e.code} on attempt {attempt+1}/{retries}: {url}')
-                      print(f'  Response body: {body}')
-                      if e.code == 401:
-                          raise RuntimeError('401 Unauthorised — check JIRA_TOKEN secret') from e
-                      if e.code == 403:
-                          raise RuntimeError('403 Forbidden — token lacks board permission') from e
-                      if e.code == 404:
-                          raise RuntimeError(f'404 Not Found — check domain/board ({domain}/{board})') from e
-                      if attempt == retries - 1:
-                          raise RuntimeError(f'HTTP {e.code} after {retries} attempts') from e
-                      time.sleep(2 ** attempt)
-                  except urllib.error.URLError as e:
-                      print(f'  Network error on attempt {attempt+1}/{retries}: {e.reason}')
-                      if attempt == retries - 1:
-                          raise RuntimeError(f'Network error: {e.reason}') from e
-                      time.sleep(2 ** attempt)
-
-          base = f'https://{domain}'
-
-          print('Fetching active sprint...')
-          sprint_data = fetch(f'{base}/rest/agile/1.0/board/{board}/sprint?state=active')
-          if not sprint_data.get('values'):
-              raise RuntimeError(f'No active sprint on board {board}')
-          sprint = sprint_data['values'][0]
-          print(f'  Sprint: "{sprint["name"]}" (id={sprint["id"]})')
-
-          print('Fetching issues...')
-          issues, start = [], 0
-          while True:
-              page  = fetch(f'{base}/rest/agile/1.0/sprint/{sprint["id"]}/issue?startAt={start}&maxResults=100&fields={fields}')
-              batch = page.get('issues', [])
-              issues += batch
-              total  = page.get('total', 0)
-              print(f'  {len(issues)} / {total}')
-              start += len(batch)
-              if not batch or start >= total:
-                  break
-
-          print('Fetching velocity history...')
-          closed  = fetch(f'{base}/rest/agile/1.0/board/{board}/sprint?state=closed&maxResults=5')
-          done_re = re.compile(r'done|complet|close|resolv', re.I)
-          history = []
-          for s in list(reversed(closed.get('values', [])))[:4]:
-              d   = fetch(f'{base}/rest/agile/1.0/sprint/{s["id"]}/issue?fields=status,customfield_10016&maxResults=500')
-              pts = sum(float(i['fields'].get('customfield_10016') or 0)
-                        for i in d.get('issues', [])
-                        if done_re.search(i['fields']['status']['name']))
-              lbl = re.sub(r'^.*?sprint\s*', 'Spr ', s['name'], flags=re.I)[:10]
-              history.append({'name': lbl, 'pts': round(pts), 'cur': False})
-              print(f'  {lbl}: {round(pts)} pts')
-
-          cur_done = sum(float(i['fields'].get('customfield_10016') or 0)
-                         for i in issues
-                         if done_re.search(i['fields']['status']['name']))
-          history_out = [{'name': 'Current', 'pts': round(cur_done), 'cur': True}] + history
-
-          out = {
-              'sprint':    sprint,
-              'issues':    issues,
-              'history':   history_out,
-              'fetchedAt': datetime.now(timezone.utc).isoformat(),
-          }
-          with open(out_path, 'w') as f:
-              json.dump(out, f, separators=(',', ':'))
-          print(f'Done — {len(issues)} issues written to {out_path}')
-
-      - name: Commit data.json via GitHub API
-        shell: python
-        env:
-          GH_TOKEN:  ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO:   ${{ github.repository }}
-          DATA_PATH: ${{ runner.temp }}/data.json
-        run: |
-          import json, base64, urllib.request, urllib.error, os
-
-          token    = os.environ['GH_TOKEN']
-          repo     = os.environ['GH_REPO']
-          in_path  = os.environ['DATA_PATH']
-          path     = 'phoenix-dashboard/data.json'
-          url      = f'https://api.github.com/repos/{repo}/contents/{path}'
-          hdrs     = {
-              'Authorization': 'token ' + token,
-              'Accept':        'application/vnd.github.v3+json',
-              'Content-Type':  'application/json',
-              'User-Agent':    'github-actions-bot',
-          }
-
-          with open(in_path, 'rb') as f:
-              encoded = base64.b64encode(f.read()).decode()
-
-          sha = None
-          try:
-              req = urllib.request.Request(url, headers=hdrs)
-              with urllib.request.urlopen(req) as r:
-                  sha = json.loads(r.read())['sha']
-          except urllib.error.HTTPError as e:
-              if e.code != 404:
-                  raise
-
-          body = {'message': 'chore: update sprint data [skip ci]', 'content': encoded}
-          if sha:
-              body['sha'] = sha
-
-          req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=hdrs, method='PUT')
-          with urllib.request.urlopen(req) as r:
-              result = json.loads(r.read())
-          print(f"Committed {path} @ {result['commit']['sha'][:7]}")
+      - run: echo "Disabled — use the browser bookmarklet instead."
