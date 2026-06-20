@@ -1,7 +1,7 @@
 # .github/workflows/jira-fetch.yml
 #
-# Fetches Jira sprint data server-side and commits phoenix-dashboard/data.json.
-# phoenix-sprint.html reads ./data.json (same folder) — no CORS, token stays secret.
+# Fetches Jira sprint data and commits phoenix-dashboard/data.json via
+# the GitHub API — no actions/checkout required, no Node.js dependency.
 #
 # Repository secrets required (Settings → Secrets and variables → Actions):
 #   JIRA_EMAIL  — cjclarke@nhbc.co.uk
@@ -21,9 +21,6 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Fetch sprint + issues from Jira
         env:
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
@@ -110,17 +107,54 @@ jobs:
               'history':   history_out,
               'fetchedAt': datetime.now(timezone.utc).isoformat(),
           }
-          # Write to phoenix-dashboard/ so the HTML can load it as ./data.json
-          with open('phoenix-dashboard/data.json', 'w') as f:
+          with open('/tmp/data.json', 'w') as f:
               json.dump(out, f, separators=(',',':'))
-          print(f"Written phoenix-dashboard/data.json — {len(issues)} issues, sprint: {sprint['name']}")
+          print(f"Fetched {len(issues)} issues — sprint: {sprint['name']}")
           PY
 
-      - name: Commit data.json
+      - name: Commit data.json via GitHub API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          git config user.name  'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add phoenix-dashboard/data.json
-          git diff --staged --quiet || \
-            git commit -m "chore: update sprint data [skip ci]" && \
-            git push
+          python3 - <<'PY'
+          import json, base64, urllib.request, urllib.error, os
+
+          token = os.environ['GH_TOKEN']
+          repo  = os.environ['GH_REPO']
+          path  = 'phoenix-dashboard/data.json'
+          url   = f'https://api.github.com/repos/{repo}/contents/{path}'
+          hdrs  = {
+              'Authorization': 'token ' + token,
+              'Accept':        'application/vnd.github.v3+json',
+              'Content-Type':  'application/json',
+              'User-Agent':    'github-actions-bot',
+          }
+
+          with open('/tmp/data.json', 'rb') as f:
+              encoded = base64.b64encode(f.read()).decode()
+
+          # Get existing file SHA (needed to update an existing file)
+          sha = None
+          try:
+              req = urllib.request.Request(url, headers=hdrs)
+              with urllib.request.urlopen(req) as r:
+                  sha = json.loads(r.read())['sha']
+          except urllib.error.HTTPError as e:
+              if e.code != 404:
+                  raise
+
+          body = {
+              'message': 'chore: update sprint data [skip ci]',
+              'content': encoded,
+          }
+          if sha:
+              body['sha'] = sha
+
+          req = urllib.request.Request(
+              url, data=json.dumps(body).encode(), headers=hdrs, method='PUT'
+          )
+          with urllib.request.urlopen(req) as r:
+              result = json.loads(r.read())
+          print(f"Committed {path} @ {result['commit']['sha'][:7]}")
+          PY
