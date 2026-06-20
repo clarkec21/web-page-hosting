@@ -94,6 +94,7 @@ main{padding:20px 24px;display:grid;gap:20px}
 .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .tbl-hdr{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)}
 .tbl-hdr-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
+.tbl-hdr-sub{font-size:.7rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
 #filterInfo{font-size:.75rem;color:var(--orange);margin-left:8px}
 #clearFilter{font-size:.72rem;cursor:pointer;margin-left:auto;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2)}
 #clearFilter:hover{border-color:var(--text2)}
@@ -177,10 +178,11 @@ tr:hover td{background:var(--surface2)}
     </div>
   </div>
 
-  <!-- Defect table -->
+  <!-- Defect table — open only -->
   <div class="tbl-wrap">
     <div class="tbl-hdr">
-      <span class="tbl-hdr-title">Defects</span>
+      <span class="tbl-hdr-title">Open Defects</span>
+      <span class="tbl-hdr-sub" id="openCount"></span>
       <span id="filterInfo"></span>
       <button id="clearFilter" onclick="clearFilter()" style="display:none">Clear filter ×</button>
     </div>
@@ -197,7 +199,7 @@ tr:hover td{background:var(--surface2)}
       </thead>
       <tbody id="defTbody"></tbody>
     </table>
-    <div class="no-rows" id="noRows" style="display:none">No defects match the current filter.</div>
+    <div class="no-rows" id="noRows" style="display:none">No open defects match the current filter.</div>
   </div>
 </main>
 
@@ -276,12 +278,14 @@ function openDefects(){
   return allDefects.filter(i => !isDone(i.fields.status.name));
 }
 
+/* Table always works from the open subset only */
 function filteredDefects(){
-  if(!activeFilter) return allDefects;
+  const base = openDefects();
+  if(!activeFilter) return base;
   if(filterType === 'priority')
-    return allDefects.filter(i => (i.fields.priority?.name || '') === activeFilter);
+    return base.filter(i => (i.fields.priority?.name || '') === activeFilter);
   if(filterType === 'age'){
-    return allDefects.filter(i => {
+    return base.filter(i => {
       const d = ageDays(i.fields.created);
       if(activeFilter === 'Fresh') return d < 7;
       if(activeFilter === 'Aging') return d >= 7 && d < 30;
@@ -289,8 +293,8 @@ function filteredDefects(){
     });
   }
   if(filterType === 'owner')
-    return allDefects.filter(i => (i.fields.assignee?.displayName || 'Unassigned') === activeFilter);
-  return allDefects;
+    return base.filter(i => (i.fields.assignee?.displayName || 'Unassigned') === activeFilter);
+  return base;
 }
 
 function setFilter(type, val, el){
@@ -586,8 +590,15 @@ function renderTable(){
     return sortAsc ? va-vb : vb-va;
   });
 
-  const tbody = document.getElementById('defTbody');
+  const tbody  = document.getElementById('defTbody');
   const noRows = document.getElementById('noRows');
+  const count  = document.getElementById('openCount');
+
+  const open = openDefects();
+  count.textContent = activeFilter
+    ? `${rows.length} of ${open.length}`
+    : `${open.length}`;
+
   if(!rows.length){ tbody.innerHTML=''; noRows.style.display='block'; return; }
   noRows.style.display='none';
 
