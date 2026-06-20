@@ -8,7 +8,8 @@
 :root{
   --bg:#0D0D0F;--surface:#16181D;--surface2:#1E2028;--border:#2A2D38;
   --red:#EF4444;--red-dim:#7F1D1D;--orange:#F97316;--amber:#F59E0B;
-  --green:#22C55E;--blue:#3B82F6;--muted:#6B7280;--text:#F3F4F6;--text2:#9CA3AF;
+  --green:#22C55E;--blue:#3B82F6;--violet:#A78BFA;--muted:#6B7280;
+  --text:#F3F4F6;--text2:#9CA3AF;
   --blocker:#DC2626;--critical:#DC2626;--high:#EA580C;--medium:#D97706;
   --low:#3B82F6;--lowest:#4B5563;
 }
@@ -76,6 +77,16 @@ main{padding:20px 24px;display:grid;gap:20px}
 .own-bar-wrap{width:80px;background:var(--surface2);border-radius:4px;height:8px;overflow:hidden}
 .own-bar{height:8px;border-radius:4px;background:var(--orange);transition:width .4s}
 .own-cnt{width:24px;text-align:right;font-size:.8rem;color:var(--text2)}
+
+/* ── Test Phase panel ── */
+.test-stat-row{display:flex;gap:20px;margin-bottom:14px}
+.test-stat{display:flex;flex-direction:column;gap:2px}
+.test-stat-val{font-size:1.5rem;font-weight:700;line-height:1;color:var(--violet)}
+.test-stat-lbl{font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.test-prio-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.test-item{display:flex;align-items:center;gap:6px;padding:5px 0;border-top:1px solid var(--border);font-size:.78rem}
+.test-item-key{color:var(--violet);white-space:nowrap;font-size:.72rem}
+.test-item-sum{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
 
 /* ── Sprint trend bars ── */
 .trend-wrap{overflow-x:auto}
@@ -149,6 +160,13 @@ tr:hover td{background:var(--surface2)}
     <div class="panel" id="ownPanel">
       <div class="panel-title">Defects by Owner</div>
       <div id="ownList"></div>
+    </div>
+    <div class="panel" id="testPanel" style="border-color:#3D2B6B">
+      <div class="panel-title" style="border-color:#3D2B6B">
+        Test Phase
+        <span class="panel-sub" id="testStatusLabel"></span>
+      </div>
+      <div id="testContent"></div>
     </div>
     <div class="panel" id="trendPanel">
       <div class="panel-title">Sprint Trend — Open vs Resolved</div>
@@ -243,6 +261,8 @@ function prioVal(p){ const i = PRIO_ORDER.indexOf(p); return i < 0 ? 99 : i; }
 
 function isDone(status){ return /done|complet|close|resolv|fixed/i.test(status); }
 
+function isTestPhase(status){ return /test/i.test(status); }
+
 function statusStyle(name){
   const k = name.toLowerCase().replace(/\s/g,'');
   if(isDone(k)) return STATUS_COLORS.done;
@@ -320,6 +340,7 @@ function render(){
   renderPriority();
   renderAge();
   renderOwner();
+  renderTestPhase();
   renderTrend();
   renderDailyCharts();
   renderTable();
@@ -413,6 +434,90 @@ function renderOwner(){
     </div>`).join('') || '<div style="color:var(--muted);font-size:.8rem">No open defects</div>';
 }
 
+/* ── Test Phase panel ── */
+function renderTestPhase(){
+  const inTest = openDefects().filter(i => isTestPhase(i.fields.status.name));
+  const el = document.getElementById('testContent');
+  const lbl = document.getElementById('testStatusLabel');
+
+  if(!inTest.length){
+    lbl.textContent = '';
+    el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;padding:4px 0">No defects currently in test phase</div>';
+    return;
+  }
+
+  // Collect distinct status names that matched, for subtitle
+  const statuses = [...new Set(inTest.map(i => i.fields.status.name))];
+  lbl.textContent = statuses.join(' · ');
+
+  // Priority counts
+  const counts = {};
+  PRIO_ORDER.forEach(p => { if(p) counts[p] = 0; });
+  inTest.forEach(i => {
+    const p = i.fields.priority?.name || 'Unknown';
+    if(counts[p] !== undefined) counts[p]++; else counts[p] = 1;
+  });
+  const prioOrder = ['Blocker','Critical','High','Medium','Low','Lowest'];
+  const max = Math.max(1, ...Object.values(counts));
+
+  const prioHtml = prioOrder.map(p => {
+    const c = counts[p] || 0;
+    if(!c) return '';
+    const col = PRIO_COLOR[p] || '#6B7280';
+    return `<div class="test-prio-row">
+      <span class="prio-dot" style="background:${col}"></span>
+      <span class="prio-name">${p}</span>
+      <div class="prio-bar-wrap"><div class="prio-bar" style="width:${Math.round(c/max*100)}%;background:${col}"></div></div>
+      <span class="prio-cnt">${c}</span>
+    </div>`;
+  }).join('');
+
+  // Age stats
+  const ages = inTest.map(i => ageDays(i.fields.created));
+  const avgAge = Math.round(ages.reduce((a,b)=>a+b,0) / ages.length);
+  const maxAge = Math.max(...ages);
+  const maxAgeCol = maxAge >= 30 ? 'var(--red)' : maxAge >= 7 ? 'var(--amber)' : 'var(--green)';
+  const avgAgeCol = avgAge >= 30 ? 'var(--red)' : avgAge >= 7 ? 'var(--amber)' : 'var(--green)';
+
+  // Sorted items for mini-list (priority desc, then age desc)
+  const sorted = inTest.slice().sort((a,b) => {
+    const pd = prioVal(a.fields.priority?.name||'') - prioVal(b.fields.priority?.name||'');
+    return pd !== 0 ? pd : ageDays(b.fields.created) - ageDays(a.fields.created);
+  });
+
+  const itemsHtml = sorted.map(i => {
+    const p = i.fields.priority?.name || '';
+    const col = PRIO_COLOR[p] || '#6B7280';
+    const d = ageDays(i.fields.created);
+    const ac = ageColor(d);
+    const url = `https://nhbc.atlassian.net/browse/${i.key}`;
+    return `<div class="test-item">
+      <span class="prio-dot" style="background:${col};flex-shrink:0"></span>
+      <a href="${url}" target="_blank" class="test-item-key">${i.key}</a>
+      <span class="test-item-sum" title="${i.fields.summary.replace(/"/g,'&quot;')}">${i.fields.summary}</span>
+      <span style="font-size:.72rem;color:${ac.fg};white-space:nowrap;margin-left:4px">${d}d</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="test-stat-row">
+      <div class="test-stat">
+        <span class="test-stat-val">${inTest.length}</span>
+        <span class="test-stat-lbl">In test</span>
+      </div>
+      <div class="test-stat">
+        <span class="test-stat-val" style="color:${avgAgeCol}">${avgAge}d</span>
+        <span class="test-stat-lbl">Avg age</span>
+      </div>
+      <div class="test-stat">
+        <span class="test-stat-val" style="color:${maxAgeCol}">${maxAge}d</span>
+        <span class="test-stat-lbl">Oldest</span>
+      </div>
+    </div>
+    ${prioHtml}
+    <div style="margin-top:10px">${itemsHtml}</div>`;
+}
+
 /* ── Sprint trend ── */
 function renderTrend(){
   if(!trendData.length) return;
@@ -456,7 +561,6 @@ function renderDailyCharts(){
     const c = (f.created || '').split('T')[0];
     if(c in raised) raised[c]++;
 
-    // Use resolutiondate if present; fall back to updated for done items
     let r = (f.resolutiondate || '').split('T')[0];
     if(!r && isDone(f.status.name)) r = (f.updated || '').split('T')[0];
     if(r && r in closed) closed[r]++;
@@ -482,7 +586,6 @@ function renderLineSvg(containerId, days, data, color){
   const px = i => PL + (n > 1 ? i / (n - 1) : 0.5) * IW;
   const py = v => PT + (1 - v / maxVal) * IH;
 
-  // Area fill path
   const areaD = [
     `M${px(0)},${bottom}`,
     `L${px(0)},${py(values[0])}`,
@@ -491,13 +594,11 @@ function renderLineSvg(containerId, days, data, color){
     'Z'
   ].join(' ');
 
-  // Stroke path
   const lineD = [
     `M${px(0)},${py(values[0])}`,
     ...values.slice(1).map((v,i) => `L${px(i+1)},${py(v)}`)
   ].join(' ');
 
-  // X-axis labels: show every N days so they don't crowd
   const step = n <= 7 ? 1 : n <= 14 ? 2 : Math.ceil(n / 7);
   const xLabels = days.map((d, i) => {
     if(i % step !== 0 && i !== n - 1) return '';
@@ -505,7 +606,6 @@ function renderLineSvg(containerId, days, data, color){
     return `<text x="${px(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" fill="#6B7280" font-size="9">${dt.getDate()}/${dt.getMonth()+1}</text>`;
   }).join('');
 
-  // Y-axis: 0, mid, max (deduplicated)
   const mid = Math.ceil(maxVal / 2);
   const yTicks = [...new Set([0, mid, maxVal])].map(v => {
     const y = py(v).toFixed(1);
@@ -514,7 +614,6 @@ function renderLineSvg(containerId, days, data, color){
             <text x="${PL-4}" y="${(py(v)+3).toFixed(1)}" text-anchor="end" fill="#6B7280" font-size="9">${v}</text>`;
   }).join('');
 
-  // Dots with SVG title tooltips (hover to see date + count)
   const dots = values.map((v, i) => {
     if(v === 0) return '';
     const dt = new Date(days[i] + 'T12:00:00');
@@ -522,12 +621,10 @@ function renderLineSvg(containerId, days, data, color){
     return `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3.5" fill="${color}" stroke="#0D0D0F" stroke-width="1.5"><title>${lbl}</title></circle>`;
   }).join('');
 
-  // Invisible wider hit targets for hover (better UX)
   const hitTargets = values.map((v, i) =>
     `<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="8" fill="transparent"><title>${new Date(days[i]+'T12:00:00').getDate()}/${new Date(days[i]+'T12:00:00').getMonth()+1}: ${v}</title></circle>`
   ).join('');
 
-  // Today marker
   const todayStr = new Date().toISOString().split('T')[0];
   const todayIdx = days.indexOf(todayStr);
   const todayLine = todayIdx >= 0
