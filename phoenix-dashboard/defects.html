@@ -217,11 +217,12 @@ tr:hover td{background:var(--surface2)}
 </main>
 
 <script>
-const PRIO_ORDER = ['Blocker','Critical','High','Medium','Low','Lowest',''];
+// Highest first — matches PS board priority scheme
+const PRIO_ORDER = ['Highest','Blocker','Critical','High','Medium','Low','Lowest',''];
 const PRIO_COLOR = {
-  Blocker: '#DC2626', Critical: '#DC2626',
-  High:    '#EA580C', Medium:   '#D97706',
-  Low:     '#3B82F6', Lowest:   '#4B5563',
+  Highest: '#DC2626', Blocker: '#DC2626', Critical: '#DC2626',
+  High:    '#EA580C', Medium:  '#D97706',
+  Low:     '#3B82F6', Lowest:  '#4B5563',
 };
 const STATUS_COLORS = {
   done:       {bg:'#052e16',fg:'#4ade80'},
@@ -358,19 +359,19 @@ function render(){
 /* ── KPIs ── */
 function renderKpi(){
   const open = openDefects();
-  const blockerCrit = open.filter(i => ['Blocker','Critical'].includes(i.fields.priority?.name)).length;
-  const high        = open.filter(i => i.fields.priority?.name === 'High').length;
-  const inProg      = open.filter(i => /inprogress|progress|development|review/i.test(i.fields.status.name.toLowerCase().replace(/\s/g,''))).length;
-  const resolved    = allDefects.filter(i => isDone(i.fields.status.name)).length;
-  const oldest      = open.length ? Math.max(...open.map(i => ageDays(i.fields.created))) : 0;
+  const highest  = open.filter(i => ['Highest','Blocker','Critical'].includes(i.fields.priority?.name)).length;
+  const high     = open.filter(i => i.fields.priority?.name === 'High').length;
+  const inProg   = open.filter(i => /inprogress|progress|development|review/i.test(i.fields.status.name.toLowerCase().replace(/\s/g,''))).length;
+  const resolved = allDefects.filter(i => isDone(i.fields.status.name)).length;
+  const oldest   = open.length ? Math.max(...open.map(i => ageDays(i.fields.created))) : 0;
 
   const kpis = [
-    {val: open.length,  lbl: 'Open Defects',      accent:'var(--red)',    sub:'total unresolved'},
-    {val: blockerCrit,  lbl: 'Blocker / Critical', accent:'var(--blocker)',sub:'highest severity'},
-    {val: high,         lbl: 'High Priority',      accent:'var(--orange)', sub:'needs attention'},
-    {val: inProg,       lbl: 'In Progress',        accent:'var(--blue)',   sub:'being worked'},
-    {val: resolved,     lbl: 'Resolved',           accent:'var(--green)',  sub:'all time in board'},
-    {val: oldest+'d',   lbl: 'Oldest Open',        accent: oldest>=30?'var(--red)':oldest>=7?'var(--amber)':'var(--green)', sub:'days since creation'},
+    {val: open.length, lbl: 'Open Defects',    accent:'var(--red)',    sub:'total unresolved'},
+    {val: highest,     lbl: 'Highest Priority', accent:'var(--blocker)',sub:'needs immediate action'},
+    {val: high,        lbl: 'High Priority',    accent:'var(--orange)', sub:'needs attention'},
+    {val: inProg,      lbl: 'In Progress',      accent:'var(--blue)',   sub:'being worked'},
+    {val: resolved,    lbl: 'Resolved',         accent:'var(--green)',  sub:'all time in board'},
+    {val: oldest+'d',  lbl: 'Oldest Open',      accent: oldest>=30?'var(--red)':oldest>=7?'var(--amber)':'var(--green)', sub:'days since creation'},
   ];
   document.getElementById('kpiRow').innerHTML = kpis.map(k => `
     <div class="kpi" style="--accent:${k.accent}">
@@ -387,16 +388,17 @@ function renderPriority(){
   PRIO_ORDER.forEach(p => { if(p) counts[p] = 0; });
   open.forEach(i => { const p = i.fields.priority?.name||'Unknown'; if(counts[p]!==undefined) counts[p]++; else counts[p]=1; });
   const max = Math.max(1, ...Object.values(counts));
-  document.getElementById('prioList').innerHTML = ['Blocker','Critical','High','Medium','Low','Lowest'].map(p => {
-    const c = counts[p]||0; if(!c) return '';
-    const col = PRIO_COLOR[p]||'#6B7280';
-    return `<div class="prio-row" id="pr-${p}" onclick="setFilter('priority','${p}',this)">
-      <span class="prio-dot" style="background:${col}"></span>
-      <span class="prio-name">${p}</span>
-      <div class="prio-bar-wrap"><div class="prio-bar" style="width:${Math.round(c/max*100)}%;background:${col}"></div></div>
-      <span class="prio-cnt">${c}</span>
-    </div>`;
-  }).join('');
+  document.getElementById('prioList').innerHTML =
+    ['Highest','Blocker','Critical','High','Medium','Low','Lowest'].map(p => {
+      const c = counts[p]||0; if(!c) return '';
+      const col = PRIO_COLOR[p]||'#6B7280';
+      return `<div class="prio-row" id="pr-${p}" onclick="setFilter('priority','${p}',this)">
+        <span class="prio-dot" style="background:${col}"></span>
+        <span class="prio-name">${p}</span>
+        <div class="prio-bar-wrap"><div class="prio-bar" style="width:${Math.round(c/max*100)}%;background:${col}"></div></div>
+        <span class="prio-cnt">${c}</span>
+      </div>`;
+    }).join('');
 }
 
 /* ── Age health ── */
@@ -453,7 +455,7 @@ function renderTestPhase(){
   PRIO_ORDER.forEach(p=>{if(p) counts[p]=0;});
   inTest.forEach(i=>{const p=i.fields.priority?.name||'Unknown';if(counts[p]!==undefined)counts[p]++;else counts[p]=1;});
   const max=Math.max(1,...Object.values(counts));
-  const prioHtml=['Blocker','Critical','High','Medium','Low','Lowest'].map(p=>{
+  const prioHtml=['Highest','Blocker','Critical','High','Medium','Low','Lowest'].map(p=>{
     const c=counts[p]||0; if(!c) return '';
     const col=PRIO_COLOR[p]||'#6B7280';
     return `<div class="test-prio-row"><span class="prio-dot" style="background:${col}"></span><span class="prio-name">${p}</span><div class="prio-bar-wrap"><div class="prio-bar" style="width:${Math.round(c/max*100)}%;background:${col}"></div></div><span class="prio-cnt">${c}</span></div>`;
