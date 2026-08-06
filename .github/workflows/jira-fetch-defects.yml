@@ -1,9 +1,6 @@
 name: Fetch Jira Defects
 
 on:
-  schedule:
-    # Every 15 minutes, Mon–Fri 07:00–19:00 UTC
-    - cron: '*/15 7-19 * * 1-5'
   workflow_dispatch:   # allow manual run from Actions tab
 
 jobs:
